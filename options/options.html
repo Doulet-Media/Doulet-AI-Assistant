@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doulet AI Assistant - Advanced Options</title>
+    <link rel="stylesheet" href="options.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Doulet AI Assistant</h1>
+            <p class="subtitle">Advanced Configuration Panel</p>
+        </div>
+
+        <div class="section">
+            <h2>General Settings</h2>
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="autoAnswer">
+                    Auto-answer when text is selected
+                </label>
+                <small class="helper-text">Automatically show AI answers when you select text</small>
+            </div>
+            
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="showButton">
+                    Show answer button on text selection
+                </label>
+                <small class="helper-text">Display a button when text is selected</small>
+            </div>
+            
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="enableSounds">
+                    Enable notification sounds
+                </label>
+                <small class="helper-text">Play sound when answer is ready</small>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Answer Settings</h2>
+            <div class="form-group">
+                <label for="answerStyle">Answer Style</label>
+                <select id="answerStyle">
+                    <option value="concise">Concise</option>
+                    <option value="detailed">Detailed</option>
+                    <option value="technical">Technical</option>
+                    <option value="casual">Casual</option>
+                </select>
+                <small class="helper-text">Choose how detailed your answers should be</small>
+            </div>
+
+            <div class="form-group">
+                <label for="language">Preferred Language</label>
+                <select id="language">
+                    <option value="auto">Auto-detect</option>
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="fr">French</option>
+                    <option value="de">German</option>
+                    <option value="it">Italian</option>
+                    <option value="pt">Portuguese</option>
+                    <option value="ru">Russian</option>
+                    <option value="zh">Chinese</option>
+                    <option value="ja">Japanese</option>
+                    <option value="ko">Korean</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="maxAnswers">Maximum Answers per Session</label>
+                <input type="number" id="maxAnswers" min="1" max="100" value="10">
+                <small class="helper-text">Limit the number of answers per browsing session</small>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Privacy & Security</h2>
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="clearHistory">
+                    Clear answer history on browser close
+                </label>
+            </div>
+            
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="anonymousMode">
+                    Anonymous mode (don't store usage data)
+                </label>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Model Selection</h2>
+            <div class="form-group">
+                <label for="model">AI Model</label>
+                <select id="model">
+                    <!-- Models will be populated dynamically -->
+                </select>
+                <small class="helper-text">Select a free model for AI responses</small>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Advanced</h2>
+            <div class="form-group">
+                <label for="customPrompt">Custom Prompt Prefix</label>
+                <textarea id="customPrompt" rows="4" placeholder="Add custom instructions that will be prepended to every request..."></textarea>
+                <small class="helper-text">Customize how the AI responds to your queries</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="timeout">Request Timeout (seconds)</label>
+                <input type="number" id="timeout" min="5" max="120" value="30">
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button id="saveBtn" class="btn-primary">Save Settings</button>
+            <button id="resetBtn" class="btn-secondary">Reset to Defaults</button>
+            <button id="testBtn" class="btn-tertiary">Test API Connection</button>
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div class="help">
+            <h3>🎯 Pro Tips:</h3>
+            <ul>
+                <li><strong>API Key Security:</strong> Your API key is stored locally and never shared</li>
+                <li><strong>Keyboard Shortcut:</strong> Use Ctrl+Shift+A for quick access</li>
+                <li><strong>Context Menu:</strong> Right-click selected text and choose "Get AI Answer"</li>
+                <li><strong>Model Selection:</strong> Choose models based on your needs (speed vs. quality)</li>
+                <li><strong>Custom Prompts:</strong> Add specific instructions for tailored responses</li>
+                <li><strong>Language Settings:</strong> Get responses in your preferred language</li>
+                <li><strong>Response Length:</strong> Adjust based on how detailed you want the answers</li>
+            </ul>
+            
+            <h3>📊 Performance Optimization:</h3>
+            <ul>
+                <li><strong>Fast Responses:</strong> Use Nova 2 Lite or Nemotron Nano 9B V2</li>
+                <li><strong>High Quality:</strong> Use Olmo 3 32B Think or KAT-Coder-Pro V1</li>
+                <li><strong>Memory Usage:</strong> Lower max tokens for faster responses</li>
+                <li><strong>Timeout Settings:</strong> Increase for complex queries with larger models</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="options.js"></script>
+</body>
+</html>

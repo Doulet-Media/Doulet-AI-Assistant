@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doulet AI Assistant - Settings</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Doulet AI Assistant</h1>
+            <p class="subtitle">Your Free AI Companion by Doulet Media</p>
+        </div>
+        
+        <div class="status" id="status">
+            <span class="status-indicator" id="statusIndicator"></span>
+            <span class="status-text" id="statusText">Checking connection...</span>
+        </div>
+
+        <div class="form-group">
+            <label for="apiKey">OpenRouter API Key</label>
+            <input type="password" id="apiKey" placeholder="Enter your free OpenRouter API key">
+            <small class="helper-text">Get a free API key from openrouter.ai</small>
+        </div>
+
+        <div class="form-group">
+            <label for="model">AI Model</label>
+            <select id="model">
+                <!-- Completely Free Models -->
+                <optgroup label="🚀 Fast & Efficient">
+                    <option value="amazon/nova-2-lite">Amazon Nova 2 Lite (3.1B)</option>
+                    <option value="arcee-ai/trinity-mini">Arcee AI Trinity Mini (326M)</option>
+                    <option value="nvidia/nemotron-nano-9b-v2">NVIDIA Nemotron Nano 9B V2 (487M)</option>
+                </optgroup>
+                <optgroup label="🧠 Advanced Reasoning">
+                    <option value="allenai/olmo-3-32b-think">AllenAI Olmo 3 32B Think (305M)</option>
+                    <option value="tng/r1t-chimera">TNG R1T Chimera (11.5B)</option>
+                    <option value="alibaba/tongyi-deepresearch-30b-a3b">Tongyi DeepResearch 30B A3B (1.34B)</option>
+                </optgroup>
+                <optgroup label="💻 Coding & Tools">
+                    <option value="kwaipilot/kat-coder-pro:free">Kwaipilot KAT-Coder-Pro V1 (83.3B)</option>
+                    <option value="openai/gpt-oss-20b">OpenAI gpt-oss-20b (3.38B)</option>
+                </optgroup>
+                <optgroup label="🖼️ Multimodal">
+                    <option value="nvidia/nemotron-nano-12b-2-vl">NVIDIA Nemotron Nano 12B 2 VL (13.5B)</option>
+                    <option value="meituan/longcat-flash-chat">Meituan LongCat Flash Chat (3.01B)</option>
+                </optgroup>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="temperature">Creativity Level</label>
+            <input type="range" id="temperature" min="0" max="1" step="0.1" value="0.7">
+            <div class="slider-labels">
+                <span>Conservative</span>
+                <span>Random</span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="maxTokens">Max Response Length</label>
+            <input type="range" id="maxTokens" min="100" max="1000" step="50" value="400">
+            <div class="slider-values">
+                <span id="maxTokensValue">400 tokens</span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="checkbox-label">
+                <input type="checkbox" id="autoAnswer">
+                Auto-answer when text is selected
+            </label>
+        </div>
+
+        <div class="buttons">
+            <button id="saveBtn" class="btn-primary">Save Settings</button>
+            <button id="testBtn" class="btn-secondary">Test Connection</button>
+        </div>
+
+        <div class="help">
+            <h3>✨ Features:</h3>
+            <ul>
+                <li><strong>Completely Free:</strong> All models listed are 100% free to use</li>
+                <li><strong>Multiple Categories:</strong> Fast models, reasoning models, coding models, and multimodal models</li>
+                <li><strong>High Performance:</strong> Models range from 326M to 83.3B parameters</li>
+                <li><strong>Long Context:</strong> Support for contexts up to 256K tokens</li>
+            </ul>
+            
+            <h3>🚀 How to use:</h3>
+            <ol>
+                <li>Enter your free OpenRouter API key</li>
+                <li>Choose your preferred AI model from the categories above</li>
+                <li>Save your settings</li>
+                <li>Highlight any text on a webpage</li>
+                <li>Click the Doulet AI Assistant icon or press Ctrl+Shift+A</li>
+                <li>Get instant AI-powered answers!</li>
+            </ol>
+            
+            <h3>💡 Model Recommendations:</h3>
+            <ul>
+                <li><strong>Quick Answers:</strong> Amazon Nova 2 Lite or NVIDIA Nemotron Nano 9B V2</li>
+                <li><strong>Complex Reasoning:</strong> AllenAI Olmo 3 32B Think or TNG R1T Chimera</li>
+                <li><strong>Coding Help:</strong> Kwaipilot KAT-Coder-Pro V1</li>
+                <li><strong>Document Analysis:</strong> NVIDIA Nemotron Nano 12B 2 VL</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
