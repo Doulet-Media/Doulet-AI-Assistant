@@ -47,33 +47,42 @@ function createAnswerButton() {
 
     const button = document.createElement('button');
     button.id = 'answersai-button';
-    button.innerHTML = '🤖 Get AI Answer';
+    button.innerHTML = '🤖';
+    button.title = 'Get AI Answer (Ctrl+Shift+Q)';
     button.style.cssText = `
         position: fixed;
-        top: 20px;
-        right: 20px;
+        top: 8px;
+        right: 8px;
         z-index: 10000;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         border: none;
-        padding: 12px 16px;
-        border-radius: 8px;
+        padding: 6px 8px;
+        border-radius: 50%;
         font-size: 14px;
-        font-weight: 500;
+        line-height: 1;
         cursor: pointer;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        transition: all 0.3s;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+        transition: all 0.2s ease;
         display: none;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.95;
     `;
     
     button.addEventListener('mouseenter', function() {
-        button.style.transform = 'translateY(-2px)';
-        button.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
+        button.style.transform = 'translateY(-1px) scale(1.1)';
+        button.style.boxShadow = '0 3px 12px rgba(102, 126, 234, 0.35)';
+        button.style.opacity = '1';
     });
     
     button.addEventListener('mouseleave', function() {
-        button.style.transform = 'translateY(0)';
-        button.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
+        button.style.transform = 'translateY(0) scale(1)';
+        button.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.25)';
+        button.style.opacity = '0.95';
     });
     
     button.addEventListener('click', function() {
@@ -337,11 +346,24 @@ document.addEventListener('mouseup', function() {
         if (button) {
             button.style.display = 'block';
             
-            // Position button near selection
+            // Position button near selection but not blocking content
             const range = selection.getRangeAt(0);
             const rect = range.getBoundingClientRect();
-            button.style.top = (rect.top + window.scrollY - 60) + 'px';
-            button.style.left = (rect.left + window.scrollX - 10) + 'px';
+            
+            // Calculate position ensuring button stays on screen
+            let top = rect.top + window.scrollY - 50;
+            let left = rect.right + window.scrollX + 10;
+            
+            // Keep button within viewport
+            if (left + 50 > window.scrollX + window.innerWidth) {
+                left = rect.left + window.scrollX - 50;
+            }
+            if (top < window.scrollY) {
+                top = window.scrollY + 10;
+            }
+            
+            button.style.top = top + 'px';
+            button.style.left = left + 'px';
         }
         
         // Auto-answer if enabled
@@ -365,37 +387,34 @@ async function getAIAnswer(text) {
     // Load API key from storage or file
     let apiKey = settings.apiKey;
     if (!apiKey) {
-        apiKey = await loadApiKeyFromFile();
-        if (!apiKey) {
-            // Try to get API key from background script
-            try {
-                const result = await chrome.runtime.sendMessage({
-                    action: 'getApiKey'
-                });
-                if (result && result.apiKey) {
-                    apiKey = result.apiKey;
-                }
-            } catch (error) {
-                console.error('Failed to get API key from background:', error);
+        // Try to get API key from background script (most reliable)
+        try {
+            const result = await chrome.runtime.sendMessage({
+                action: 'getApiKey'
+            });
+            if (result && result.apiKey) {
+                apiKey = result.apiKey;
             }
+        } catch (error) {
+            console.error('Failed to get API key from background:', error);
         }
-        
-        if (!apiKey) {
-            // Try one more time by reloading settings
-            try {
-                const result = await chrome.storage.sync.get(['apiKey']);
-                if (result && result.apiKey) {
-                    apiKey = result.apiKey;
-                }
-            } catch (error) {
-                console.error('Failed to reload settings:', error);
+    }
+    
+    // If still no API key, try reloading settings from storage
+    if (!apiKey) {
+        try {
+            const result = await chrome.storage.sync.get(['apiKey']);
+            if (result && result.apiKey) {
+                apiKey = result.apiKey;
             }
+        } catch (error) {
+            console.error('Failed to reload settings:', error);
         }
-        
-        if (!apiKey) {
-            alert('Please enter your OpenRouter API key in the extension settings.');
-            return;
-        }
+    }
+    
+    if (!apiKey) {
+        alert('Please enter your OpenRouter API key in the extension settings.');
+        return;
     }
     
     isProcessing = true;
@@ -529,19 +548,7 @@ function playNotificationSound() {
     }
 }
 
-// Load API key from apikey.txt file
-async function loadApiKeyFromFile() {
-    try {
-        const response = await fetch(chrome.runtime.getURL('apikey.txt'));
-        if (response.ok) {
-            const apiKey = await response.text();
-            return apiKey.trim();
-        }
-    } catch (error) {
-        console.error('Failed to load API key from file:', error);
-    }
-    return '';
-}
+// Removed loadApiKeyFromFile function - API key must be entered manually in settings
 
 // Get API key from background script
 async function getApiKeyFromBackground() {
@@ -556,18 +563,41 @@ async function getApiKeyFromBackground() {
     }
 }
 
-// Keyboard shortcut (Ctrl+Shift+A)
+// Keyboard shortcut (Ctrl+Shift+Q)
 document.addEventListener('keydown', function(e) {
-    if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'q') {
+        e.preventDefault();
         const selection = window.getSelection();
         if (selection.toString().trim().length > 0) {
             currentSelection = selection.toString().trim();
             getAIAnswer(currentSelection);
         } else {
-            alert('Please select some text first, then press Ctrl+Shift+A');
+            // If no text selected, show a subtle hint
+            const button = document.getElementById('answersai-button') || createAnswerButton();
+            if (button) {
+                button.style.display = 'block';
+                button.style.animation = 'pulse 1s ease-in-out 3';
+                setTimeout(() => {
+                    button.style.animation = '';
+                }, 3000);
+            }
         }
     }
 });
+
+// Add pulse animation for hints
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); }
+    }
+    #answersai-button {
+        animation-duration: 0.3s;
+    }
+`;
+document.head.appendChild(style);
 
 // Create initial elements
 createAnswerButton();

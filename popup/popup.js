@@ -21,14 +21,8 @@ document.addEventListener('DOMContentLoaded', function() {
         'autoAnswer',
         'freeModels'
     ], async function(result) {
-        // Load API key from storage or file
+        // Load API key from storage only (no file loading)
         let apiKey = result.apiKey;
-        if (!apiKey) {
-            apiKey = await loadApiKeyFromFile();
-            if (apiKey) {
-                chrome.storage.sync.set({ apiKey: apiKey });
-            }
-        }
         
         // Always set the API key in the input field if available
         if (apiKey) {
@@ -67,12 +61,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Load free models
         if (result.freeModels && result.freeModels.length > 0) {
-            populateModelSelect(result.freeModels);
+            populateModelSelect(result.freeModels, result.model);
         } else {
             // Fetch free models if not available
             fetchFreeModels().then(models => {
                 if (models.length > 0) {
-                    populateModelSelect(models);
+                    populateModelSelect(models, result.model);
                     chrome.storage.sync.set({ freeModels: models });
                 }
             });
@@ -94,12 +88,17 @@ document.addEventListener('DOMContentLoaded', function() {
             autoAnswer: autoAnswerCheckbox.checked
         };
 
-        chrome.storage.sync.set(settings, function() {
-            showStatus('Settings saved!', 'connected');
-            
-            // Check connection status
-            checkConnectionStatus(settings.apiKey);
-        });
+        try {
+            chrome.storage.sync.set(settings, function() {
+                showStatus('Settings saved!', 'connected');
+                
+                // Check connection status
+                checkConnectionStatus(settings.apiKey);
+            });
+        } catch (error) {
+            console.error('Failed to save settings:', error);
+            showStatus('Failed to save settings', 'disconnected');
+        }
     });
 
     // Test connection
@@ -154,24 +153,29 @@ document.addEventListener('DOMContentLoaded', function() {
         showStatus('API key format is valid ✓', 'connected');
         
         // Still try the network test in the background, but don't show timeout
-        chrome.runtime.sendMessage({
-            action: 'testConnection',
-            apiKey: apiKey
-        }, function(response) {
-            if (response && response.success) {
-                if (response.message) {
-                    showStatus(response.message, 'connected');
+        try {
+            chrome.runtime.sendMessage({
+                action: 'testConnection',
+                apiKey: apiKey
+            }, function(response) {
+                if (response && response.success) {
+                    if (response.message) {
+                        showStatus(response.message, 'connected');
+                    } else {
+                        showStatus('Connected to OpenRouter ✓', 'connected');
+                    }
                 } else {
-                    showStatus('Connected to OpenRouter ✓', 'connected');
+                    // Don't change the status if network test fails - format is still valid
+                    if (!response || !response.success) {
+                        // Keep the "format is valid" message
+                        showStatus('API key format is valid ✓', 'connected');
+                    }
                 }
-            } else {
-                // Don't change the status if network test fails - format is still valid
-                if (!response || !response.success) {
-                    // Keep the "format is valid" message
-                    showStatus('API key format is valid ✓', 'connected');
-                }
-            }
-        });
+            });
+        } catch (error) {
+            console.error('Failed to test connection:', error);
+            showStatus('Failed to test connection', 'disconnected');
+        }
     }
 
     // Test connection function
@@ -200,19 +204,7 @@ document.addEventListener('DOMContentLoaded', function() {
         statusIndicator.className = 'status-indicator ' + status;
     }
 
-    // Load API key from apikey.txt file
-    async function loadApiKeyFromFile() {
-        try {
-            const response = await fetch(chrome.runtime.getURL('apikey.txt'));
-            if (response.ok) {
-                const apiKey = await response.text();
-                return apiKey.trim();
-            }
-        } catch (error) {
-            console.error('Failed to load API key from file:', error);
-        }
-        return '';
-    }
+    // Removed loadApiKeyFromFile function - API key must be entered manually in settings
 
     // Fetch free models from OpenRouter
     async function fetchFreeModels() {
@@ -222,7 +214,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const apiKey = result.apiKey;
             
             if (!apiKey) {
-                // Return default models if no API key
+                // Return minimal fallback list if no API key
                 return ['amazon/nova-2-lite-v1:free'];
             }
             
@@ -241,34 +233,51 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
             
             if (data && data.data) {
-                // Filter for models with "free" in the name or completely free models
+                // Enhanced filtering for free models using keyword search
                 const freeModels = data.data
                     .filter(model => {
-                        // Check if "free" is in the model name or ID
-                        const name = (model.name || model.id || '').toLowerCase();
-                        const isFreeInName = name.includes('free');
+                        // Primary filter: Check for "free" keyword in various fields
+                        const name = (model.name || '').toLowerCase();
+                        const id = (model.id || '').toLowerCase();
+                        const description = (model.description || '').toLowerCase();
                         
-                        // Also check pricing if available
+                        // Look for free-related keywords
+                        const freeKeywords = [
+                            'free', 'gratis', 'no cost', 'zero cost', 'complimentary'
+                        ];
+                        
+                        const hasFreeKeyword = freeKeywords.some(keyword =>
+                            name.includes(keyword) ||
+                            id.includes(keyword) ||
+                            description.includes(keyword)
+                        );
+                        
+                        // Secondary filter: Check pricing
                         const isFreeByPricing = model.pricing &&
-                                               model.pricing.prompt === "0" &&
-                                               model.pricing.completion === "0";
+                                               (model.pricing.prompt === "0" || model.pricing.prompt === "0.0") &&
+                                               (model.pricing.completion === "0" || model.pricing.completion === "0.0");
                         
-                        return isFreeInName || isFreeByPricing;
+                        // Tertiary filter: Check for :free suffix in ID
+                        const hasFreeSuffix = id.includes(':free');
+                        
+                        // Quaternary filter: Check model capabilities/tags
+                        const capabilities = (model.capabilities || []);
+                        const hasFreeCapability = capabilities.includes('free') ||
+                                                 capabilities.includes('no-cost');
+                        
+                        return hasFreeKeyword || isFreeByPricing || hasFreeSuffix || hasFreeCapability;
                     })
                     .map(model => model.id)
+                    .filter(id => id && id.length > 0 && id.includes(':free')) // Ensure valid free model IDs
                     .sort(); // Sort alphabetically
                 
-                // Ensure our default model is included
-                if (!freeModels.includes('amazon/nova-2-lite-v1:free')) {
-                    freeModels.unshift('amazon/nova-2-lite-v1:free');
-                }
-                
-                return freeModels;
+                return freeModels.length > 0 ? freeModels : ['amazon/nova-2-lite-v1:free'];
             }
             
             return ['amazon/nova-2-lite-v1:free'];
         } catch (error) {
             console.error('Failed to fetch free models:', error);
+            // Return minimal fallback
             return ['amazon/nova-2-lite-v1:free'];
         }
     }
@@ -302,13 +311,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Populate model select with free models
-    function populateModelSelect(models) {
+    function populateModelSelect(models, currentModel) {
         modelSelect.innerHTML = '';
         models.forEach(model => {
             const option = document.createElement('option');
             option.value = model;
             option.textContent = getModelDisplayName(model);
-            if (model === result.model) {
+            if (model === currentModel) {
                 option.selected = true;
             }
             modelSelect.appendChild(option);

@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Doulet AI Assistant",
-  "version": "2.1.0",
-  "description": "Get AI-powered answers when you highlight text on any webpage. Developed by Doulet Media.",
+  "version": "2.2.1",
+  "description": "Get AI-powered answers when you highlight text on any webpage. Works universally across all sites including Google Docs.",
   "author": "Doulet Media",
+  "default_locale": "en",
   "action": {
     "default_popup": "popup/popup.html",
     "default_title": "Doulet AI Assistant - Get AI Answers"
@@ -13,7 +14,9 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content/content.js"],
-      "css": ["content/content.css"]
+      "css": ["content/content.css"],
+      "run_at": "document_end",
+      "all_frames": false
     }
   ],
   "background": {
@@ -24,12 +27,25 @@
     "storage",
     "activeTab",
     "scripting",
-    "contextMenus"
+    "contextMenus",
+    "tabs"
   ],
   "host_permissions": [
-    "https://*.openrouter.ai/*"
+    "https://*.openrouter.ai/*",
+    "https://docs.google.com/*",
+    "https://drive.google.com/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
-  }
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Q",
+        "mac": "Command+Shift+Q"
+      },
+      "description": "Open Doulet AI Assistant"
+    }
+  },
+  "privacy_policy": "PRIVACY_POLICY.md"
 }

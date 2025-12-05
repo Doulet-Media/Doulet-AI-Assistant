@@ -26,15 +26,6 @@ async function getAIAnswer(request, sendResponse) {
         let result = await chrome.storage.sync.get(['apiKey']);
         let apiKey = result.apiKey;
         
-        // If no API key in storage, try loading from file
-        if (!apiKey) {
-            apiKey = await loadApiKeyFromFile();
-            if (apiKey) {
-                // Store the API key in storage for future use
-                await chrome.storage.sync.set({ apiKey: apiKey });
-            }
-        }
-        
         if (!apiKey) {
             sendResponse({
                 success: false,
@@ -158,27 +149,28 @@ chrome.runtime.onInstalled.addListener(async function(details) {
         const freeModels = await getFreeModels();
         const defaultModel = freeModels.length > 0 ? freeModels[0] : 'amazon/nova-2-lite-v1:free';
         
-        // Load API key from apikey.txt file
-        const apiKey = await loadApiKeyFromFile();
-        
-        // Show welcome message
-        chrome.storage.sync.set({
-            model: defaultModel,
-            temperature: 0.7,
-            maxTokens: 400,
-            autoAnswer: false,
-            showButton: true,
-            enableSounds: false,
-            answerStyle: 'concise',
-            language: 'auto',
-            maxAnswers: 10,
-            clearHistory: false,
-            anonymousMode: false,
-            customPrompt: '',
-            timeout: 30,
-            freeModels: freeModels,
-            apiKey: apiKey
-        });
+        // Show welcome message - NO API KEY LOADED FROM FILE
+        try {
+            chrome.storage.sync.set({
+                model: defaultModel,
+                temperature: 0.7,
+                maxTokens: 400,
+                autoAnswer: false,
+                showButton: true,
+                enableSounds: false,
+                answerStyle: 'concise',
+                language: 'auto',
+                maxAnswers: 10,
+                clearHistory: false,
+                anonymousMode: false,
+                customPrompt: '',
+                timeout: 30,
+                freeModels: freeModels
+                // NO apiKey field - users must enter it manually
+            });
+        } catch (error) {
+            console.error('Failed to save settings on install:', error);
+        }
         
         // Open welcome page
         chrome.tabs.create({
@@ -189,37 +181,13 @@ chrome.runtime.onInstalled.addListener(async function(details) {
 
 // Handle extension startup
 chrome.runtime.onStartup.addListener(async function() {
-    // Reload API key from file in case it was updated
-    const apiKey = await loadApiKeyFromFile();
-    if (apiKey) {
-        chrome.storage.sync.set({ apiKey: apiKey });
-    }
-    
     // Recreate context menu on startup
     createContextMenu();
 });
 
-// Also load API key when the background script starts
-(async function() {
-    const apiKey = await loadApiKeyFromFile();
-    if (apiKey) {
-        chrome.storage.sync.set({ apiKey: apiKey });
-    }
-})();
+// Removed automatic loading from file - users must enter API key manually in settings
 
-// Load API key from apikey.txt file
-async function loadApiKeyFromFile() {
-    try {
-        const response = await fetch(chrome.runtime.getURL('apikey.txt'));
-        if (response.ok) {
-            const apiKey = await response.text();
-            return apiKey.trim();
-        }
-    } catch (error) {
-        console.error('Failed to load API key from file:', error);
-    }
-    return '';
-}
+// Removed loadApiKeyFromFile function - no longer needed
 
 // Get free models from OpenRouter API
 async function getFreeModels() {
@@ -229,7 +197,7 @@ async function getFreeModels() {
         const apiKey = result.apiKey;
         
         if (!apiKey) {
-            // Return default models if no API key
+            // Return minimal fallback list if no API key
             return ['amazon/nova-2-lite-v1:free'];
         }
         
@@ -248,34 +216,51 @@ async function getFreeModels() {
         const data = await response.json();
         
         if (data && data.data) {
-            // Filter for models with "free" in the name or completely free models
+            // Enhanced filtering for free models using keyword search
             const freeModels = data.data
                 .filter(model => {
-                    // Check if "free" is in the model name or ID
-                    const name = (model.name || model.id || '').toLowerCase();
-                    const isFreeInName = name.includes('free');
+                    // Primary filter: Check for "free" keyword in various fields
+                    const name = (model.name || '').toLowerCase();
+                    const id = (model.id || '').toLowerCase();
+                    const description = (model.description || '').toLowerCase();
                     
-                    // Also check pricing if available
+                    // Look for free-related keywords
+                    const freeKeywords = [
+                        'free', 'gratis', 'no cost', 'zero cost', 'complimentary'
+                    ];
+                    
+                    const hasFreeKeyword = freeKeywords.some(keyword =>
+                        name.includes(keyword) ||
+                        id.includes(keyword) ||
+                        description.includes(keyword)
+                    );
+                    
+                    // Secondary filter: Check pricing
                     const isFreeByPricing = model.pricing &&
-                                           model.pricing.prompt === "0" &&
-                                           model.pricing.completion === "0";
+                                           (model.pricing.prompt === "0" || model.pricing.prompt === "0.0") &&
+                                           (model.pricing.completion === "0" || model.pricing.completion === "0.0");
                     
-                    return isFreeInName || isFreeByPricing;
+                    // Tertiary filter: Check for :free suffix in ID
+                    const hasFreeSuffix = id.includes(':free');
+                    
+                    // Quaternary filter: Check model capabilities/tags
+                    const capabilities = (model.capabilities || []);
+                    const hasFreeCapability = capabilities.includes('free') ||
+                                             capabilities.includes('no-cost');
+                    
+                    return hasFreeKeyword || isFreeByPricing || hasFreeSuffix || hasFreeCapability;
                 })
                 .map(model => model.id)
+                .filter(id => id && id.length > 0 && id.includes(':free')) // Ensure valid free model IDs
                 .sort(); // Sort alphabetically
             
-            // Ensure our default model is included
-            if (!freeModels.includes('amazon/nova-2-lite-v1:free')) {
-                freeModels.unshift('amazon/nova-2-lite-v1:free');
-            }
-            
-            return freeModels;
+            return freeModels.length > 0 ? freeModels : ['amazon/nova-2-lite-v1:free'];
         }
         
         return ['amazon/nova-2-lite-v1:free'];
     } catch (error) {
         console.error('Failed to fetch free models:', error);
+        // Return minimal fallback
         return ['amazon/nova-2-lite-v1:free'];
     }
 }
