@@ -33,8 +33,7 @@
   ],
   "background": {
     "service_worker": "background/background.js",
-    "type": "module",
-    "persistent": false
+    "type": "module"
   },
   "permissions": [
     "storage",
