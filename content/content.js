@@ -43,13 +43,13 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
 // Create the answer button
 function createAnswerButton() {
-    const existingButton = document.getElementById('doulet-ai-button');
+    const existingButton = document.getElementById('answersai-button');
     if (existingButton) {
         existingButton.remove();
     }
 
     const button = document.createElement('button');
-    button.id = 'doulet-ai-button';
+    button.id = 'answersai-button';
     button.innerHTML = '🤖';
     button.title = 'Get AI Answer (Ctrl+Shift+Q)';
     button.style.cssText = `
@@ -122,13 +122,13 @@ function createAnswerButton() {
 
 // Create the answer modal
 function createAnswerModal() {
-    const existingModal = document.getElementById('doulet-ai-modal');
+    const existingModal = document.getElementById('answersai-modal');
     if (existingModal) {
         existingModal.remove();
     }
 
     const modal = document.createElement('div');
-    modal.id = 'doulet-ai-modal';
+    modal.id = 'answersai-modal';
     modal.innerHTML = `
         <div class="modal-overlay">
             <div class="modal-content">
@@ -362,112 +362,175 @@ function copyAnswer() {
 }
 
 // Handle text selection with enhanced universal compatibility
-document.addEventListener('mouseup', function(e) {
-    // Check if extension context is still valid before processing
-    if (!chrome || !chrome.runtime) {
-        console.warn('Extension context invalidated, ignoring text selection');
-        return;
-    }
-    
-    // Enhanced selection detection for all websites
-    const selection = window.getSelection();
-    const selectedText = selection.toString().trim();
-    
-    // Enhanced selection validation for universal compatibility
-    if (selectedText.length > 0) {
-        // Validate selection quality
-        if (selectedText.length < 3 && !/[a-zA-Z]/.test(selectedText)) {
-            // Too short or only numbers/symbols, ignore
+function handleTextSelection() {
+    try {
+        // Check if extension context is still valid before processing
+        if (!chrome || !chrome.runtime) {
+            console.warn('Extension context invalidated, ignoring text selection');
             return;
         }
         
-        currentSelection = selectedText;
+        // Enhanced selection detection for all websites
+        const selection = window.getSelection();
+        const selectedText = selection.toString().trim();
         
-        // Enhanced selection visibility if enabled
-        if (settings.enableSelectionEnhancement && !isSelectionEnhanced) {
-            enhanceSelectionVisibility();
-        }
-        
-        // Create or get the answer button
-        let button = document.getElementById('doulet-ai-button');
-        if (!button) {
-            button = createAnswerButton();
-        }
-        
-        if (button) {
-            button.style.display = 'block';
+        // Enhanced selection validation for universal compatibility
+        if (selectedText.length > 0) {
+            // Validate selection quality
+            if (selectedText.length < 3 && !/[a-zA-Z]/.test(selectedText)) {
+                // Too short or only numbers/symbols, ignore
+                return;
+            }
             
-            // Enhanced positioning for universal website compatibility
-            try {
-                const range = selection.getRangeAt(0);
-                const rect = range.getBoundingClientRect();
+            currentSelection = selectedText;
+            
+            // Enhanced selection visibility if enabled
+            if (settings.enableSelectionEnhancement && !isSelectionEnhanced) {
+                enhanceSelectionVisibility();
+            }
+            
+            // Create or get the answer button
+            let button = document.getElementById('answersai-button');
+            if (!button) {
+                button = createAnswerButton();
+            }
+            
+            if (button) {
+                button.style.display = 'block';
                 
-                // Calculate position ensuring button stays on screen
-                let top = rect.top + window.scrollY - 50;
-                let left = rect.right + window.scrollX + 10;
-                
-                // Keep button within viewport with better calculations
-                const viewportWidth = window.innerWidth;
-                const viewportHeight = window.innerHeight;
-                const scrollX = window.scrollX;
-                const scrollY = window.scrollY;
-                
-                // Adjust position if near edges
-                if (left + 60 > scrollX + viewportWidth) {
-                    left = rect.left + scrollX - 60;
+                // Enhanced positioning for universal website compatibility
+                try {
+                    const range = selection.getRangeAt(0);
+                    const rect = range.getBoundingClientRect();
+                    
+                    // Calculate position ensuring button stays on screen
+                    let top = rect.top + window.scrollY - 50;
+                    let left = rect.right + window.scrollX + 10;
+                    
+                    // Keep button within viewport with better calculations
+                    const viewportWidth = window.innerWidth;
+                    const viewportHeight = window.innerHeight;
+                    const scrollX = window.scrollX;
+                    const scrollY = window.scrollY;
+                    
+                    // Adjust position if near edges
+                    if (left + 60 > scrollX + viewportWidth) {
+                        left = rect.left + scrollX - 60;
+                    }
+                    
+                    if (top < scrollY) {
+                        top = scrollY + 10;
+                    }
+                    
+                    if (top + 40 > scrollY + viewportHeight - 10) {
+                        top = rect.bottom + scrollY + 10;
+                    }
+                    
+                    // Ensure button doesn't go off-screen left
+                    if (left < scrollX + 10) {
+                        left = scrollX + 10;
+                    }
+                    
+                    button.style.top = top + 'px';
+                    button.style.left = left + 'px';
+                    button.style.opacity = '1';
+                    
+                    // Add smooth animation
+                    button.style.transition = 'all 0.3s ease';
+                    
+                } catch (error) {
+                    console.warn('Failed to position button:', error);
+                    // Fallback positioning
+                    button.style.top = (window.scrollY + 10) + 'px';
+                    button.style.left = (window.scrollX + 10) + 'px';
                 }
-                
-                if (top < scrollY) {
-                    top = scrollY + 10;
-                }
-                
-                if (top + 40 > scrollY + viewportHeight - 10) {
-                    top = rect.bottom + scrollY + 10;
-                }
-                
-                // Ensure button doesn't go off-screen left
-                if (left < scrollX + 10) {
-                    left = scrollX + 10;
-                }
-                
-                button.style.top = top + 'px';
-                button.style.left = left + 'px';
-                button.style.opacity = '1';
-                
-                // Add smooth animation
-                button.style.transition = 'all 0.3s ease';
-                
-            } catch (error) {
-                console.warn('Failed to position button:', error);
-                // Fallback positioning
-                button.style.top = (window.scrollY + 10) + 'px';
-                button.style.left = (window.scrollX + 10) + 'px';
+            }
+            
+            // Auto-answer if enabled
+            if (settings.autoAnswer && settings.apiKey) {
+                setTimeout(() => {
+                    getAIAnswer(currentSelection);
+                }, 500);
+            }
+        } else {
+            const button = document.getElementById('answersai-button');
+            if (button) {
+                button.style.display = 'none';
+                button.style.opacity = '0';
+            }
+            
+            // Reset selection enhancement when no text selected
+            if (isSelectionEnhanced) {
+                resetSelectionVisibility();
             }
         }
-        
-        // Auto-answer if enabled
-        if (settings.autoAnswer && settings.apiKey) {
-            setTimeout(() => {
-                getAIAnswer(currentSelection);
-            }, 500);
-        }
-    } else {
-        const button = document.getElementById('doulet-ai-button');
-        if (button) {
-            button.style.display = 'none';
-            button.style.opacity = '0';
-        }
-        
-        // Reset selection enhancement when no text selected
-        if (isSelectionEnhanced) {
-            resetSelectionVisibility();
-        }
+    } catch (error) {
+        console.error('Error in text selection handler:', error);
+    }
+}
+
+// Add multiple event listeners for better text selection detection
+document.addEventListener('mouseup', handleTextSelection, { passive: true });
+document.addEventListener('keyup', function(e) {
+    // Also trigger on keyboard selection (Shift + Arrow keys)
+    if (e.shiftKey) {
+        setTimeout(handleTextSelection, 50);
     }
 }, { passive: true });
 
-// Enhance selection visibility
+// Add a mutation observer to handle dynamic content
+const observer = new MutationObserver(function(mutations) {
+    // Re-check selection after DOM changes
+    setTimeout(handleTextSelection, 100);
+});
+
+// Start observing the document body
+observer.observe(document.body, {
+    childList: true,
+    subtree: true
+});
+
+// Enhanced selection handler with better compatibility
+function enhancedSelectionHandler() {
+    // Check if browser selection is blocked
+    if (settings.blockBrowserSelection) {
+        // Prevent default browser selection behavior
+        document.addEventListener('selectstart', function(e) {
+            if (settings.blockBrowserSelection) {
+                e.preventDefault();
+                return false;
+            }
+        }, { passive: false });
+        
+        // Override getSelection to provide custom selection
+        const originalGetSelection = window.getSelection;
+        window.getSelection = function() {
+            const selection = originalGetSelection.call(window);
+            if (settings.blockBrowserSelection && selection.toString().trim().length > 0) {
+                // Apply custom styling to selected text
+                const range = selection.getRangeAt(0);
+                const selectedNodes = getSelectedNodes(range);
+                
+                selectedNodes.forEach(node => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        node.classList.add('extension-selection');
+                    }
+                });
+            }
+            return selection;
+        };
+    }
+}
+
+// Enhanced selection visibility with safe DOM operations
 function enhanceSelectionVisibility() {
     try {
+        // Check if extension context is still valid
+        if (!chrome || !chrome.runtime) {
+            console.warn('Extension context invalidated, skipping selection enhancement');
+            return;
+        }
+        
         const selection = window.getSelection();
         if (!selection.rangeCount) return;
         
@@ -477,19 +540,23 @@ function enhanceSelectionVisibility() {
         // Store original styles and enhance visibility
         selectedNodes.forEach(node => {
             if (node.nodeType === Node.ELEMENT_NODE) {
-                const computedStyle = window.getComputedStyle(node);
-                originalSelectionStyles.set(node, {
-                    backgroundColor: computedStyle.backgroundColor,
-                    color: computedStyle.color,
-                    fontWeight: computedStyle.fontWeight
-                });
-                
-                // Enhanced selection styling
-                node.style.backgroundColor = '#fff3cd'; // Light yellow background
-                node.style.color = '#856404'; // Darker text for contrast
-                node.style.fontWeight = '600'; // Bold text
-                node.style.outline = '2px solid #ffc107'; // Orange outline
-                node.style.outlineOffset = '2px';
+                try {
+                    const computedStyle = window.getComputedStyle(node);
+                    originalSelectionStyles.set(node, {
+                        backgroundColor: computedStyle.backgroundColor,
+                        color: computedStyle.color,
+                        fontWeight: computedStyle.fontWeight
+                    });
+                    
+                    // Enhanced selection styling
+                    node.style.backgroundColor = '#fff3cd'; // Light yellow background
+                    node.style.color = '#856404'; // Darker text for contrast
+                    node.style.fontWeight = '600'; // Bold text
+                    node.style.outline = '2px solid #ffc107'; // Orange outline
+                    node.style.outlineOffset = '2px';
+                } catch (nodeError) {
+                    console.warn('Failed to enhance node styling:', nodeError);
+                }
             }
         });
         
@@ -499,9 +566,15 @@ function enhanceSelectionVisibility() {
     }
 }
 
-// Reset selection visibility
+// Reset selection visibility with safe DOM operations
 function resetSelectionVisibility() {
     try {
+        // Check if extension context is still valid
+        if (!chrome || !chrome.runtime) {
+            console.warn('Extension context invalidated, skipping selection reset');
+            return;
+        }
+        
         originalSelectionStyles.forEach((originalStyle, node) => {
             try {
                 if (node && node.style) {
@@ -521,6 +594,33 @@ function resetSelectionVisibility() {
     } catch (error) {
         console.warn('Failed to reset selection visibility:', error);
     }
+}
+
+// Get all nodes within a selection range
+function getSelectedNodes(range) {
+    const nodes = [];
+    const walker = document.createTreeWalker(
+        range.commonAncestorContainer,
+        NodeFilter.SHOW_ELEMENT,
+        {
+            acceptNode: function(node) {
+                const nodeRange = document.createRange();
+                nodeRange.selectNodeContents(node);
+                
+                if (range.intersectsNode(node)) {
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+                return NodeFilter.FILTER_REJECT;
+            }
+        }
+    );
+    
+    let node;
+    while (node = walker.nextNode()) {
+        nodes.push(node);
+    }
+    
+    return nodes;
 }
 
 // Enhanced Google Workspace compatibility
@@ -607,107 +707,6 @@ function enhanceGoogleWorkspaceSupport() {
 // Initialize Google Workspace support
 enhanceGoogleWorkspaceSupport();
 
-// Get all nodes within a selection range
-function getSelectedNodes(range) {
-    const nodes = [];
-    const walker = document.createTreeWalker(
-        range.commonAncestorContainer,
-        NodeFilter.SHOW_ELEMENT,
-        {
-            acceptNode: function(node) {
-                const nodeRange = document.createRange();
-                nodeRange.selectNodeContents(node);
-                
-                if (range.intersectsNode(node)) {
-                    return NodeFilter.FILTER_ACCEPT;
-                }
-                return NodeFilter.FILTER_REJECT;
-            }
-        }
-    );
-    
-    let node;
-    while (node = walker.nextNode()) {
-        nodes.push(node);
-    }
-    
-    return nodes;
-}
-
-// Enhanced selection visibility with safe DOM operations
-function enhanceSelectionVisibility() {
-    try {
-        // Check if extension context is still valid
-        if (!chrome || !chrome.runtime) {
-            console.warn('Extension context invalidated, skipping selection enhancement');
-            return;
-        }
-        
-        const selection = window.getSelection();
-        if (!selection.rangeCount) return;
-        
-        const range = selection.getRangeAt(0);
-        const selectedNodes = getSelectedNodes(range);
-        
-        // Store original styles and enhance visibility
-        selectedNodes.forEach(node => {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-                try {
-                    const computedStyle = window.getComputedStyle(node);
-                    originalSelectionStyles.set(node, {
-                        backgroundColor: computedStyle.backgroundColor,
-                        color: computedStyle.color,
-                        fontWeight: computedStyle.fontWeight
-                    });
-                    
-                    // Enhanced selection styling
-                    node.style.backgroundColor = '#fff3cd'; // Light yellow background
-                    node.style.color = '#856404'; // Darker text for contrast
-                    node.style.fontWeight = '600'; // Bold text
-                    node.style.outline = '2px solid #ffc107'; // Orange outline
-                    node.style.outlineOffset = '2px';
-                } catch (nodeError) {
-                    console.warn('Failed to enhance node styling:', nodeError);
-                }
-            }
-        });
-        
-        isSelectionEnhanced = true;
-    } catch (error) {
-        console.warn('Failed to enhance selection visibility:', error);
-    }
-}
-
-// Reset selection visibility with safe DOM operations
-function resetSelectionVisibility() {
-    try {
-        // Check if extension context is still valid
-        if (!chrome || !chrome.runtime) {
-            console.warn('Extension context invalidated, skipping selection reset');
-            return;
-        }
-        
-        originalSelectionStyles.forEach((originalStyle, node) => {
-            try {
-                if (node && node.style) {
-                    node.style.backgroundColor = originalStyle.backgroundColor;
-                    node.style.color = originalStyle.color;
-                    node.style.fontWeight = originalStyle.fontWeight;
-                    node.style.outline = '';
-                    node.style.outlineOffset = '';
-                }
-            } catch (nodeError) {
-                console.warn('Failed to reset node styling:', nodeError);
-            }
-        });
-        
-        originalSelectionStyles.clear();
-        isSelectionEnhanced = false;
-    } catch (error) {
-        console.warn('Failed to reset selection visibility:', error);
-    }
-}
-
 // Get AI answer
 async function getAIAnswer(text) {
     if (isProcessing) return;
@@ -737,6 +736,13 @@ async function getAIAnswer(text) {
     // Load API key from storage or file
     let apiKey = settings.apiKey;
     if (!apiKey) {
+        // Check extension context before trying to get API key
+        if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
+            console.warn('Extension context invalidated, cannot get API key');
+            alert('Extension context invalidated. Please reload the extension.');
+            return;
+        }
+        
         // Try to get API key from background script (most reliable)
         try {
             const result = await chrome.runtime.sendMessage({
@@ -846,6 +852,16 @@ async function getAIAnswer(text) {
     
     // Build final prompt
     prompt += `Please provide a helpful answer to the following text or question.${stylePrompt}${languagePrompt} Keep your response under ${settings.maxTokens || 400} tokens:\n\n"${text}"`;
+    
+    // Check extension context before sending message
+    if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
+        console.warn('Extension context invalidated, cannot send message to background');
+        isProcessing = false;
+        loading.style.display = 'none';
+        error.style.display = 'block';
+        error.textContent = 'Extension context invalidated. Please reload the extension.';
+        return;
+    }
     
     chrome.runtime.sendMessage({
         action: 'getAnswer',
@@ -995,6 +1011,57 @@ document.addEventListener('keydown', function(e) {
         }, 2000);
     }
     
+    // Toggle browser selection blocking with Ctrl+Shift+S
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        
+        // Check if extension context is valid before accessing chrome API
+        if (!chrome || !chrome.storage || !chrome.storage.sync) {
+            console.warn('Extension context invalidated, cannot toggle selection blocking');
+            return;
+        }
+        
+        settings.blockBrowserSelection = !settings.blockBrowserSelection;
+        
+        // Show toggle status
+        const status = settings.blockBrowserSelection ? 'ON' : 'OFF';
+        const color = settings.blockBrowserSelection ? '#dc3545' : '#28a745';
+        
+        let indicator = document.getElementById('selection-block-indicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'selection-block-indicator';
+            indicator.style.cssText = `
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                background: ${color};
+                color: white;
+                padding: 8px 16px;
+                border-radius: 20px;
+                font-size: 12px;
+                font-weight: bold;
+                z-index: 99999;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                transition: all 0.3s;
+            `;
+            document.body.appendChild(indicator);
+        }
+        
+        indicator.style.background = color;
+        indicator.textContent = `Block Browser Selection: ${status}`;
+        
+        // Apply or remove selection blocking
+        toggleSelectionBlocking(settings.blockBrowserSelection);
+        
+        setTimeout(() => {
+            if (indicator) {
+                indicator.style.opacity = '0';
+                setTimeout(() => indicator.remove(), 300);
+            }
+        }, 2000);
+    }
+    
     // Original Ctrl+Shift+Q functionality
     if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'q') {
         e.preventDefault();
@@ -1016,6 +1083,97 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+// Function to toggle browser selection blocking
+function toggleSelectionBlocking(enabled) {
+    if (enabled) {
+        // Disable browser text selection
+        document.addEventListener('selectstart', preventSelection, { passive: false });
+        document.addEventListener('mousedown', preventSelection, { passive: false });
+        document.addEventListener('mouseup', preventSelection, { passive: false });
+        document.addEventListener('mousemove', preventSelection, { passive: false });
+        
+        // Add visual indicator that selection is blocked
+        let blocker = document.getElementById('selection-blocker');
+        if (!blocker) {
+            blocker = document.createElement('div');
+            blocker.id = 'selection-blocker';
+            blocker.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(220, 53, 69, 0.05);
+                pointer-events: none;
+                z-index: 99998;
+                border: 2px dashed rgba(220, 53, 69, 0.3);
+                display: none;
+            `;
+            document.body.appendChild(blocker);
+        }
+        blocker.style.display = 'block';
+        
+        console.log('Browser selection blocking enabled');
+    } else {
+        // Re-enable browser text selection
+        document.removeEventListener('selectstart', preventSelection);
+        document.removeEventListener('mousedown', preventSelection);
+        document.removeEventListener('mouseup', preventSelection);
+        document.removeEventListener('mousemove', preventSelection);
+        
+        // Hide visual indicator
+        let blocker = document.getElementById('selection-blocker');
+        if (blocker) {
+            blocker.style.display = 'none';
+        }
+        
+        console.log('Browser selection blocking disabled');
+    }
+}
+
+// Function to prevent browser selection
+function preventSelection(e) {
+    if (settings.blockBrowserSelection) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    }
+    return true;
+}
+
+// Initialize text selection functionality
+(function initializeTextSelection() {
+    try {
+        console.log('Doulet AI Assistant content script loaded');
+        
+        // Create initial elements
+        createAnswerButton();
+        createAnswerModal();
+        
+        // Force initial check for any existing selection
+        setTimeout(handleTextSelection, 100);
+        
+        // Add a fallback text selection handler that's always active
+        document.addEventListener('selectionchange', function() {
+            try {
+                // Small delay to ensure selection is complete
+                setTimeout(handleTextSelection, 50);
+            } catch (error) {
+                console.error('Error in selectionchange handler:', error);
+            }
+        });
+        
+        // Add additional mouseup listener for better compatibility
+        document.addEventListener('mouseup', function(e) {
+            // Small delay to ensure selection is complete
+            setTimeout(handleTextSelection, 10);
+        }, { passive: true });
+        
+    } catch (error) {
+        console.error('Error initializing text selection:', error);
+    }
+})();
+
 // Add pulse animation for hints
 const style = document.createElement('style');
 style.textContent = `
@@ -1033,3 +1191,8 @@ document.head.appendChild(style);
 // Create initial elements
 createAnswerButton();
 createAnswerModal();
+
+// Initialize selection blocking state
+if (settings.blockBrowserSelection) {
+    toggleSelectionBlocking(true);
+}

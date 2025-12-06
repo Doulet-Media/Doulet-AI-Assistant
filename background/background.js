@@ -2,28 +2,46 @@
 
 // Handle messages from popup and content scripts
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-    if (request.action === 'getAnswer') {
-        getAIAnswer(request, sendResponse);
-        return true; // Keep message channel open for async response
-    } else if (request.action === 'testConnection') {
-        testConnection(request.apiKey, sendResponse);
-        return true;
-    } else if (request.action === 'getApiKey') {
-        // Return API key from storage
-        chrome.storage.sync.get(['apiKey'], function(result) {
-            sendResponse({ apiKey: result.apiKey || '' });
-        });
-        return true; // Keep message channel open for async response
-    } else if (request.action === 'fetchFreeModels') {
-        // Fetch and return free models list
-        updateFreeModelsList().then(models => {
-            sendResponse({ success: true, models: models });
-        }).catch(error => {
-            console.error('Failed to fetch free models:', error);
-            sendResponse({ success: false, error: error.message });
-        });
-        return true; // Keep message channel open for async response
+    try {
+        if (request.action === 'getAnswer') {
+            getAIAnswer(request, sendResponse);
+            return true; // Keep message channel open for async response
+        } else if (request.action === 'testConnection') {
+            testConnection(request.apiKey, sendResponse);
+            return true;
+        } else if (request.action === 'getApiKey') {
+            // Return API key from storage
+            chrome.storage.sync.get(['apiKey'], function(result) {
+                if (chrome.runtime.lastError) {
+                    console.error('Storage error:', chrome.runtime.lastError);
+                    sendResponse({ apiKey: '' });
+                    return;
+                }
+                sendResponse({ apiKey: result.apiKey || '' });
+            });
+            return true; // Keep message channel open for async response
+        } else if (request.action === 'fetchFreeModels') {
+            // Fetch and return free models list
+            updateFreeModelsList().then(models => {
+                sendResponse({ success: true, models: models });
+            }).catch(error => {
+                console.error('Failed to fetch free models:', error);
+                sendResponse({ success: false, error: error.message });
+            });
+            return true; // Keep message channel open for async response
+        }
+    } catch (error) {
+        console.error('Error in message listener:', error);
+        // Only send response if the channel is still open
+        if (sendResponse) {
+            try {
+                sendResponse({ success: false, error: 'Message handling failed' });
+            } catch (sendError) {
+                console.warn('Failed to send error response:', sendError);
+            }
+        }
     }
+    return true; // Keep message channel open for async response
 });
 
 // Get AI answer from OpenRouter
@@ -192,7 +210,31 @@ chrome.runtime.onInstalled.addListener(async function(details) {
 chrome.runtime.onStartup.addListener(async function() {
     // Recreate context menu on startup
     createContextMenu();
+    
+    // Validate extension context
+    const isValid = validateExtensionContext();
+    if (!isValid) {
+        console.error('Extension context is not properly initialized');
+    }
 });
+
+// Connection validation function
+function validateExtensionContext() {
+    try {
+        // Test if we can access chrome APIs
+        chrome.storage.sync.get(null, function(result) {
+            if (chrome.runtime.lastError) {
+                console.warn('Storage API not accessible:', chrome.runtime.lastError);
+                return false;
+            }
+            return true;
+        });
+        return true;
+    } catch (error) {
+        console.warn('Extension context validation failed:', error);
+        return false;
+    }
+}
 
 // Removed automatic loading from file - users must enter API key manually in settings
 
@@ -306,13 +348,40 @@ function createContextMenu() {
 }
 
 // Handle context menu click
-chrome.contextMenus.onClicked.addListener(function(info, tab) {
+chrome.contextMenus.onClicked.addListener(async function(info, tab) {
     if (info.menuItemId === 'get-ai-answer' && info.selectionText) {
-        // Send message to content script to get answer
-        chrome.tabs.sendMessage(tab.id, {
-            action: 'handleContextMenuSelection',
-            text: info.selectionText
-        });
+        try {
+            // First, check if content script is available
+            const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+            
+            // Send message to content script to get answer
+            chrome.tabs.sendMessage(tab.id, {
+                action: 'handleContextMenuSelection',
+                text: info.selectionText
+            }, function(response) {
+                // Handle response or error
+                if (chrome.runtime.lastError) {
+                    console.warn('Content script not available, showing error to user');
+                    // If content script is not available, show a notification (if API is available)
+                    if (chrome.notifications && chrome.notifications.create) {
+                        try {
+                            chrome.notifications.create({
+                                type: 'basic',
+                                iconUrl: chrome.runtime.getURL('icons/icon48.png'),
+                                title: 'Doulet AI Assistant',
+                                message: 'Please refresh the page and try again. The extension needs to be loaded on this page.'
+                            });
+                        } catch (notificationError) {
+                            console.warn('Failed to create notification:', notificationError);
+                        }
+                    } else {
+                        console.warn('Notifications API not available');
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Failed to handle context menu click:', error);
+        }
     }
 });
 
