@@ -9,8 +9,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Doulet AI Assistant</h1>
-            <p class="subtitle">Your Free AI Companion by Doulet Media</p>
+            <h1>🤖 Doulet AI Assistant</h1>
+            <p class="subtitle">Your Free AI Companion</p>
         </div>
         
         <div class="status" id="status">
@@ -27,26 +27,9 @@
         <div class="form-group">
             <label for="model">AI Model</label>
             <select id="model">
-                <!-- Completely Free Models -->
-                <optgroup label="🚀 Fast & Efficient">
-                    <option value="amazon/nova-2-lite">Amazon Nova 2 Lite (3.1B)</option>
-                    <option value="arcee-ai/trinity-mini">Arcee AI Trinity Mini (326M)</option>
-                    <option value="nvidia/nemotron-nano-9b-v2">NVIDIA Nemotron Nano 9B V2 (487M)</option>
-                </optgroup>
-                <optgroup label="🧠 Advanced Reasoning">
-                    <option value="allenai/olmo-3-32b-think">AllenAI Olmo 3 32B Think (305M)</option>
-                    <option value="tng/r1t-chimera">TNG R1T Chimera (11.5B)</option>
-                    <option value="alibaba/tongyi-deepresearch-30b-a3b">Tongyi DeepResearch 30B A3B (1.34B)</option>
-                </optgroup>
-                <optgroup label="💻 Coding & Tools">
-                    <option value="kwaipilot/kat-coder-pro:free">Kwaipilot KAT-Coder-Pro V1 (83.3B)</option>
-                    <option value="openai/gpt-oss-20b">OpenAI gpt-oss-20b (3.38B)</option>
-                </optgroup>
-                <optgroup label="🖼️ Multimodal">
-                    <option value="nvidia/nemotron-nano-12b-2-vl">NVIDIA Nemotron Nano 12B 2 VL (13.5B)</option>
-                    <option value="meituan/longcat-flash-chat">Meituan LongCat Flash Chat (3.01B)</option>
-                </optgroup>
+                <option value="">Loading free models...</option>
             </select>
+            <small class="helper-text">All models are completely free to use</small>
         </div>
 
         <div class="form-group">
@@ -74,35 +57,36 @@
         </div>
 
         <div class="buttons">
-            <button id="saveBtn" class="btn-primary">Save Settings</button>
-            <button id="testBtn" class="btn-secondary">Test Connection</button>
+            <button id="saveBtn" class="btn-primary">💾 Save Settings</button>
+            <button id="testBtn" class="btn-secondary">✅ Test Connection</button>
         </div>
 
-        <div class="help">
-            <h3>✨ Features:</h3>
+        <div class="features">
+            <h3>✨ What's New:</h3>
             <ul>
-                <li><strong>Completely Free:</strong> All models listed are 100% free to use</li>
-                <li><strong>Multiple Categories:</strong> Fast models, reasoning models, coding models, and multimodal models</li>
-                <li><strong>High Performance:</strong> Models range from 326M to 83.3B parameters</li>
-                <li><strong>Long Context:</strong> Support for contexts up to 256K tokens</li>
+                <li><strong>Auto Discovery:</strong> Automatically finds all free models from OpenRouter</li>
+                <li><strong>Real-time Updates:</strong> Get the latest free models without manual updates</li>
+                <li><strong>Smart Filtering:</strong> Only shows models that are completely free</li>
+                <li><strong>Universal Compatibility:</strong> Works on all websites including Google Workspace</li>
             </ul>
             
             <h3>🚀 How to use:</h3>
             <ol>
                 <li>Enter your free OpenRouter API key</li>
-                <li>Choose your preferred AI model from the categories above</li>
+                <li>Models will be automatically fetched and displayed</li>
+                <li>Choose your preferred AI model</li>
                 <li>Save your settings</li>
                 <li>Highlight any text on a webpage</li>
-                <li>Click the Doulet AI Assistant icon or press Ctrl+Shift+A</li>
+                <li>Click the floating AI button or press Ctrl+Shift+Q</li>
                 <li>Get instant AI-powered answers!</li>
             </ol>
             
-            <h3>💡 Model Recommendations:</h3>
+            <h3>💡 Tips:</h3>
             <ul>
-                <li><strong>Quick Answers:</strong> Amazon Nova 2 Lite or NVIDIA Nemotron Nano 9B V2</li>
-                <li><strong>Complex Reasoning:</strong> AllenAI Olmo 3 32B Think or TNG R1T Chimera</li>
-                <li><strong>Coding Help:</strong> Kwaipilot KAT-Coder-Pro V1</li>
-                <li><strong>Document Analysis:</strong> NVIDIA Nemotron Nano 12B 2 VL</li>
+                <li>Connection test automatically fetches available models</li>
+                <li>Models are updated in real-time when you enter your API key</li>
+                <li>Works seamlessly with Google Docs, Gmail, and other Google Workspace apps</li>
+                <li>Non-intrusive design that doesn't block your content</li>
             </ul>
         </div>
     </div>

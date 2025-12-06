@@ -339,8 +339,14 @@ function copyAnswer() {
     });
 }
 
-// Handle text selection
+// Handle text selection with extension context validation
 document.addEventListener('mouseup', function(e) {
+    // Check if extension context is still valid before processing
+    if (!chrome || !chrome.runtime) {
+        console.warn('Extension context invalidated, ignoring text selection');
+        return;
+    }
+    
     const selection = window.getSelection();
     const selectedText = selection.toString().trim();
     

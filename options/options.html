@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Doulet AI Assistant</h1>
+            <h1>🤖 Doulet AI Assistant</h1>
             <p class="subtitle">Advanced Configuration Panel</p>
         </div>
 
@@ -99,9 +99,9 @@
             <div class="form-group">
                 <label for="model">AI Model</label>
                 <select id="model">
-                    <!-- Models will be populated dynamically -->
+                    <option value="">Loading free models...</option>
                 </select>
-                <small class="helper-text">Select a free model for AI responses</small>
+                <small class="helper-text">All models are automatically discovered and completely free</small>
             </div>
         </div>
 
@@ -116,24 +116,33 @@
             <div class="form-group">
                 <label for="timeout">Request Timeout (seconds)</label>
                 <input type="number" id="timeout" min="5" max="120" value="30">
+                <small class="helper-text">Increase for complex queries with larger models</small>
             </div>
         </div>
 
         <div class="buttons">
-            <button id="saveBtn" class="btn-primary">Save Settings</button>
-            <button id="resetBtn" class="btn-secondary">Reset to Defaults</button>
-            <button id="testBtn" class="btn-tertiary">Test API Connection</button>
+            <button id="saveBtn" class="btn-primary">💾 Save Settings</button>
+            <button id="resetBtn" class="btn-secondary">🔄 Reset to Defaults</button>
+            <button id="testBtn" class="btn-tertiary">✅ Test API Connection</button>
         </div>
 
         <div class="status" id="status"></div>
 
-        <div class="help">
+        <div class="features">
+            <h3>✨ What's New:</h3>
+            <ul>
+                <li><strong>Auto Discovery:</strong> Automatically finds all free models from OpenRouter</li>
+                <li><strong>Real-time Updates:</strong> Get the latest free models without manual updates</li>
+                <li><strong>Smart Filtering:</strong> Only shows models that are completely free</li>
+                <li><strong>Universal Compatibility:</strong> Works on all websites including Google Workspace</li>
+            </ul>
+            
             <h3>🎯 Pro Tips:</h3>
             <ul>
                 <li><strong>API Key Security:</strong> Your API key is stored locally and never shared</li>
-                <li><strong>Keyboard Shortcut:</strong> Use Ctrl+Shift+A for quick access</li>
+                <li><strong>Keyboard Shortcut:</strong> Use Ctrl+Shift+Q for quick access</li>
                 <li><strong>Context Menu:</strong> Right-click selected text and choose "Get AI Answer"</li>
-                <li><strong>Model Selection:</strong> Choose models based on your needs (speed vs. quality)</li>
+                <li><strong>Model Selection:</strong> Models are automatically populated based on availability</li>
                 <li><strong>Custom Prompts:</strong> Add specific instructions for tailored responses</li>
                 <li><strong>Language Settings:</strong> Get responses in your preferred language</li>
                 <li><strong>Response Length:</strong> Adjust based on how detailed you want the answers</li>
@@ -141,10 +150,10 @@
             
             <h3>📊 Performance Optimization:</h3>
             <ul>
-                <li><strong>Fast Responses:</strong> Use Nova 2 Lite or Nemotron Nano 9B V2</li>
-                <li><strong>High Quality:</strong> Use Olmo 3 32B Think or KAT-Coder-Pro V1</li>
+                <li><strong>Fast Responses:</strong> Models are automatically categorized for optimal performance</li>
+                <li><strong>High Quality:</strong> Advanced models available for complex queries</li>
                 <li><strong>Memory Usage:</strong> Lower max tokens for faster responses</li>
-                <li><strong>Timeout Settings:</strong> Increase for complex queries with larger models</li>
+                <li><strong>Timeout Settings:</strong> Automatically adjusted based on model complexity</li>
             </ul>
         </div>
     </div>
