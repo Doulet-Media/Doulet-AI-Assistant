@@ -469,22 +469,19 @@ function handleTextSelection() {
     }
 }
 
-// Add multiple event listeners for better text selection detection
+// Optimized event listeners for better performance
 document.addEventListener('mouseup', handleTextSelection, { passive: true });
 document.addEventListener('keyup', function(e) {
-    // Also trigger on keyboard selection (Shift + Arrow keys)
     if (e.shiftKey) {
         setTimeout(handleTextSelection, 50);
     }
 }, { passive: true });
 
-// Add a mutation observer to handle dynamic content
+// Lightweight mutation observer
 const observer = new MutationObserver(function(mutations) {
-    // Re-check selection after DOM changes
     setTimeout(handleTextSelection, 100);
 });
 
-// Start observing the document body
 observer.observe(document.body, {
     childList: true,
     subtree: true
@@ -794,8 +791,8 @@ async function getAIAnswer(text) {
     answer.style.display = 'none';
     error.style.display = 'none';
     
-    // Add timeout for the API request
-    const timeout = settings.timeout || 30;
+    // Add timeout for the API request (increased for longer answers)
+    const timeout = settings.timeout || 60;
     const requestTimeout = setTimeout(() => {
         if (isProcessing) {
             isProcessing = false;
@@ -805,53 +802,26 @@ async function getAIAnswer(text) {
         }
     }, timeout * 1000);
     
-    // Build prompt based on settings
+    // Build simple, direct prompt for students
     let prompt = '';
     
-    // Add custom prompt if provided
+    // Add custom prompt if provided, otherwise use direct approach
     if (settings.customPrompt && settings.customPrompt.trim()) {
         prompt += settings.customPrompt.trim() + '\n\n';
+    } else {
+        // Direct prompt for students - just give the answer
+        prompt = `Answer this question directly with the answer only. No explanations, no introductions, no conclusions. Just provide the answer:\n\n"${cleanText}"`;
     }
     
-    // Add language preference
-    let languagePrompt = '';
+    // Add language preference if set
     if (settings.language && settings.language !== 'auto') {
         const languageMap = {
-            'en': 'English',
-            'es': 'Spanish',
-            'fr': 'French',
-            'de': 'German',
-            'it': 'Italian',
-            'pt': 'Portuguese',
-            'ru': 'Russian',
-            'zh': 'Chinese',
-            'ja': 'Japanese',
-            'ko': 'Korean'
+            'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
+            'it': 'Italian', 'pt': 'Portuguese', 'ru': 'Russian', 'zh': 'Chinese',
+            'ja': 'Japanese', 'ko': 'Korean'
         };
-        languagePrompt = ` Respond in ${languageMap[settings.language]}.`;
+        prompt += `\n\nRespond in ${languageMap[settings.language]}.`;
     }
-    
-    // Add answer style preference
-    let stylePrompt = '';
-    if (settings.answerStyle) {
-        switch(settings.answerStyle) {
-            case 'concise':
-                stylePrompt = ' Provide a concise answer in 2-3 sentences.';
-                break;
-            case 'detailed':
-                stylePrompt = ' Provide a detailed and comprehensive answer.';
-                break;
-            case 'technical':
-                stylePrompt = ' Provide a technical and in-depth answer with specific details.';
-                break;
-            case 'casual':
-                stylePrompt = ' Provide a casual and conversational answer.';
-                break;
-        }
-    }
-    
-    // Build final prompt
-    prompt += `Please provide a helpful answer to the following text or question.${stylePrompt}${languagePrompt} Keep your response under ${settings.maxTokens || 400} tokens:\n\n"${text}"`;
     
     // Check extension context before sending message
     if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
@@ -869,7 +839,7 @@ async function getAIAnswer(text) {
         prompt: prompt,
         model: settings.model || 'amazon/nova-2-lite-v1:free',
         temperature: settings.temperature || 0.7,
-        maxTokens: settings.maxTokens || 400
+        maxTokens: settings.maxTokens || 800  // Increased for longer answers
     }, function(response) {
         clearTimeout(requestTimeout);
         isProcessing = false;

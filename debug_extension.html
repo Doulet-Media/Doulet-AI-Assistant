@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extension Debug Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .debug-section {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+        }
+        .debug-section h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .warning { background: #fff3cd; border-color: #ffeaa7; }
+        .info { background: #d1ecf1; border-color: #bee5eb; }
+        .log-container {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-button.success { background: #28a745; }
+        .test-button.error { background: #dc3545; }
+        .test-button.warning { background: #ffc107; color: #212529; }
+        code {
+            background: #f1f1f1;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .status-item {
+            padding: 15px;
+            border-radius: 8px;
+            background: #fff;
+            border: 2px solid #dee2e6;
+        }
+        .status-item.success { border-color: #28a745; background: #f8fff9; }
+        .status-item.error { border-color: #dc3545; background: #fff8f8; }
+        .status-item.warning { border-color: #ffc107; background: #fffbf0; }
+        .status-item.info { border-color: #17a2b8; background: #f0ffff; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Extension Debug Page</h1>
+    <p>This page will help identify and debug all extension issues.</p>
+
+    <div class="status-grid">
+        <div class="status-item" id="chromeApiStatus">
+            <h4>Chrome API Access</h4>
+            <div id="chromeApiResult">Testing...</div>
+        </div>
+        <div class="status-item" id="contentScriptStatus">
+            <h4>Content Script</h4>
+            <div id="contentScriptResult">Testing...</div>
+        </div>
+        <div class="status-item" id="backgroundScriptStatus">
+            <h4>Background Script</h4>
+            <div id="backgroundScriptResult">Testing...</div>
+        </div>
+        <div class="status-item" id="messagePassingStatus">
+            <h4>Message Passing</h4>
+            <div id="messagePassingResult">Testing...</div>
+        </div>
+        <div class="status-item" id="storageStatus">
+            <h4>Storage Access</h4>
+            <div id="storageResult">Testing...</div>
+        </div>
+        <div class="status-item" id="selectionStatus">
+            <h4>Text Selection</h4>
+            <div id="selectionResult">Testing...</div>
+        </div>
+    </div>
+
+    <div class="debug-section info">
+        <h3>🧪 Manual Tests</h3>
+        <button class="test-button" onclick="testAll()">Run All Tests</button>
+        <button class="test-button" onclick="testChromeAPIs()">Test Chrome APIs</button>
+        <button class="test-button" onclick="testContentScript()">Test Content Script</button>
+        <button class="test-button" onclick="testBackgroundScript()">Test Background Script</button>
+        <button class="test-button" onclick="testMessagePassing()">Test Message Passing</button>
+        <button class="test-button" onclick="testStorage()">Test Storage</button>
+        <button class="test-button" onclick="testSelection()">Test Text Selection</button>
+        <button class="test-button" onclick="testButtonCreation()">Test Button Creation</button>
+        <button class="test-button" onclick="testModalCreation()">Test Modal Creation</button>
+        <button class="test-button warning" onclick="clearLogs()">Clear Logs</button>
+    </div>
+
+    <div class="debug-section">
+        <h3>📋 Console Logs</h3>
+        <div id="logContainer" class="log-container"></div>
+    </div>
+
+    <div class="debug-section">
+        <h3>📝 Test Text for Selection</h3>
+        <p id="testText" style="font-size: 18px; padding: 15px; background: white; border-radius: 8px; border: 2px solid #ddd;">
+            This is test text for selection. Select this text to test the extension's text selection functionality. The AI button should appear near your selection.
+        </p>
+        <div class="info">
+            <strong>Keyboard Shortcuts:</strong>
+            <ul>
+                <li><code>Ctrl + Shift + Q</code> - Get AI answer</li>
+                <li><code>Ctrl + Shift + E</code> - Toggle selection enhancement</li>
+                <li><code>Ctrl + Shift + S</code> - Toggle browser selection blocking</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="debug-section">
+        <h3>🔧 Extension Elements</h3>
+        <div id="elementStatus">Checking for extension elements...</div>
+        <button class="test-button" onclick="checkElements()">Check Elements</button>
+    </div>
+
+    <div class="debug-section">
+        <h3>📊 Extension Manifest</h3>
+        <div id="manifestInfo">Loading manifest information...</div>
+    </div>
+
+    <script>
+        let logContainer = document.getElementById('logContainer');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : type === 'warning' ? '#ffc107' : '#17a2b8';
+            logContainer.innerHTML += `[${timestamp}] <span style="color:${color}; font-weight:bold;">${type.toUpperCase()}</span>: ${message}\n`;
+            logContainer.scrollTop = logContainer.scrollHeight;
+            console.log(`[${timestamp}] ${type.toUpperCase()}: ${message}`);
+        }
+
+        function setStatus(elementId, status, message, type) {
+            const element = document.getElementById(elementId);
+            const resultElement = document.getElementById(elementId.replace('Status', 'Result'));
+            
+            element.className = `status-item ${type}`;
+            resultElement.innerHTML = `<strong>${status}</strong><br><small>${message}</small>`;
+        }
+
+        // Test Chrome APIs
+        function testChromeAPIs() {
+            log('Testing Chrome APIs...', 'info');
+            
+            try {
+                // Test basic chrome object
+                if (typeof chrome !== 'undefined') {
+                    log('✅ Chrome object available', 'success');
+                    setStatus('chromeApiStatus', '✅ Available', 'Chrome APIs are accessible', 'success');
+                    
+                    // Test specific APIs
+                    const apis = [
+                        'runtime', 'storage', 'tabs', 'contextMenus'
+                    ];
+                    
+                    apis.forEach(api => {
+                        if (chrome[api]) {
+                            log(`✅ Chrome.${api} API available`, 'success');
+                        } else {
+                            log(`❌ Chrome.${api} API not available`, 'error');
+                        }
+                    });
+                    
+                } else {
+                    log('❌ Chrome object not available', 'error');
+                    setStatus('chromeApiStatus', '❌ Not Available', 'Chrome APIs are not accessible', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error testing Chrome APIs: ${error.message}`, 'error');
+                setStatus('chromeApiStatus', '❌ Error', error.message, 'error');
+            }
+        }
+
+        // Test Content Script
+        function testContentScript() {
+            log('Testing Content Script...', 'info');
+            
+            try {
+                // Check if content script elements exist
+                const button = document.getElementById('answersai-button');
+                const modal = document.getElementById('answersai-modal');
+                
+                if (button) {
+                    log('✅ Content script button exists', 'success');
+                } else {
+                    log('❌ Content script button not found', 'error');
+                }
+                
+                if (modal) {
+                    log('✅ Content script modal exists', 'success');
+                } else {
+                    log('❌ Content script modal not found', 'error');
+                }
+                
+                // Check if content script functions are available
+                if (typeof window.getSelection !== 'undefined') {
+                    log('✅ getSelection API available', 'success');
+                } else {
+                    log('❌ getSelection API not available', 'error');
+                }
+                
+                setStatus('contentScriptStatus', '✅ Loaded', 
+                    `Button: ${button ? 'Found' : 'Missing'}, Modal: ${modal ? 'Found' : 'Missing'}`, 
+                    button && modal ? 'success' : 'error');
+                    
+            } catch (error) {
+                log(`❌ Error testing content script: ${error.message}`, 'error');
+                setStatus('contentScriptStatus', '❌ Error', error.message, 'error');
+            }
+        }
+
+        // Test Background Script
+        function testBackgroundScript() {
+            log('Testing Background Script...', 'info');
+            
+            try {
+                if (typeof chrome !== 'undefined' && chrome.runtime) {
+                    // Test if background script is responding
+                    chrome.runtime.sendMessage({
+                        action: 'getApiKey'
+                    }, function(response) {
+                        if (chrome.runtime.lastError) {
+                            log(`❌ Background script error: ${chrome.runtime.lastError.message}`, 'error');
+                            setStatus('backgroundScriptStatus', '❌ Error', chrome.runtime.lastError.message, 'error');
+                        } else {
+                            if (response) {
+                                log('✅ Background script responding', 'success');
+                                log(`API Key status: ${response.apiKey ? 'Set' : 'Not set'}`, 'info');
+                                setStatus('backgroundScriptStatus', '✅ Responding', 
+                                    `API Key: ${response.apiKey ? 'Set' : 'Not set'}`, 'success');
+                            } else {
+                                log('❌ No response from background script', 'error');
+                                setStatus('backgroundScriptStatus', '❌ No Response', 'No response received', 'error');
+                            }
+                        }
+                    });
+                } else {
+                    log('❌ Chrome runtime not available', 'error');
+                    setStatus('backgroundScriptStatus', '❌ Not Available', 'Chrome runtime not accessible', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error testing background script: ${error.message}`, 'error');
+                setStatus('backgroundScriptStatus', '❌ Error', error.message, 'error');
+            }
+        }
+
+        // Test Message Passing
+        function testMessagePassing() {
+            log('Testing Message Passing...', 'info');
+            
+            try {
+                if (typeof chrome !== 'undefined' && chrome.runtime) {
+                    // Test sending message to background
+                    chrome.runtime.sendMessage({
+                        action: 'testConnection',
+                        apiKey: 'test'
+                    }, function(response) {
+                        if (chrome.runtime.lastError) {
+                            log(`❌ Message passing error: ${chrome.runtime.lastError.message}`, 'error');
+                            setStatus('messagePassingStatus', '❌ Error', chrome.runtime.lastError.message, 'error');
+                        } else {
+                            if (response) {
+                                log('✅ Message passing working', 'success');
+                                log(`Response: ${JSON.stringify(response)}`, 'info');
+                                setStatus('messagePassingStatus', '✅ Working', 'Messages sent and received successfully', 'success');
+                            } else {
+                                log('❌ No response to message', 'error');
+                                setStatus('messagePassingStatus', '❌ No Response', 'No response to test message', 'error');
+                            }
+                        }
+                    });
+                } else {
+                    log('❌ Chrome runtime not available for message passing', 'error');
+                    setStatus('messagePassingStatus', '❌ Not Available', 'Chrome runtime not accessible', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error testing message passing: ${error.message}`, 'error');
+                setStatus('messagePassingStatus', '❌ Error', error.message, 'error');
+            }
+        }
+
+        // Test Storage
+        function testStorage() {
+            log('Testing Storage...', 'info');
+            
+            try {
+                if (typeof chrome !== 'undefined' && chrome.storage) {
+                    // Test sync storage
+                    chrome.storage.sync.get(null, function(result) {
+                        if (chrome.runtime.lastError) {
+                            log(`❌ Storage error: ${chrome.runtime.lastError.message}`, 'error');
+                            setStatus('storageStatus', '❌ Error', chrome.runtime.lastError.message, 'error');
+                        } else {
+                            log('✅ Storage accessible', 'success');
+                            log(`Storage keys: ${Object.keys(result).join(', ')}`, 'info');
+                            setStatus('storageStatus', '✅ Accessible', 
+                                `Keys: ${Object.keys(result).length}`, 'success');
+                        }
+                    });
+                } else {
+                    log('❌ Chrome storage not available', 'error');
+                    setStatus('storageStatus', '❌ Not Available', 'Chrome storage not accessible', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error testing storage: ${error.message}`, 'error');
+                setStatus('storageStatus', '❌ Error', error.message, 'error');
+            }
+        }
+
+        // Test Text Selection
+        function testSelection() {
+            log('Testing Text Selection...', 'info');
+            
+            try {
+                const selection = window.getSelection();
+                if (selection) {
+                    log('✅ Selection API available', 'success');
+                    
+                    // Test selection functionality
+                    const testText = document.getElementById('testText');
+                    if (testText) {
+                        // Simulate selection
+                        const range = document.createRange();
+                        range.selectNodeContents(testText);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                        
+                        log('✅ Selection simulation successful', 'success');
+                        log(`Selected text: "${selection.toString().substring(0, 50)}..."`, 'info');
+                        
+                        // Check if button appears
+                        setTimeout(() => {
+                            const button = document.getElementById('answersai-button');
+                            if (button && button.style.display !== 'none') {
+                                log('✅ AI button appeared after selection', 'success');
+                            } else {
+                                log('❌ AI button did not appear after selection', 'error');
+                            }
+                        }, 500);
+                        
+                        setStatus('selectionStatus', '✅ Working', 'Selection API and simulation working', 'success');
+                    } else {
+                        log('❌ Test text element not found', 'error');
+                        setStatus('selectionStatus', '❌ Error', 'Test text element missing', 'error');
+                    }
+                } else {
+                    log('❌ Selection API not available', 'error');
+                    setStatus('selectionStatus', '❌ Not Available', 'Selection API not accessible', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error testing selection: ${error.message}`, 'error');
+                setStatus('selectionStatus', '❌ Error', error.message, 'error');
+            }
+        }
+
+        // Test Button Creation
+        function testButtonCreation() {
+            log('Testing Button Creation...', 'info');
+            
+            try {
+                // Check if button exists
+                const button = document.getElementById('answersai-button');
+                if (button) {
+                    log('✅ Button exists', 'success');
+                    log(`Button position: ${button.style.top}, ${button.style.left}`, 'info');
+                    log(`Button display: ${button.style.display}`, 'info');
+                    log(`Button opacity: ${button.style.opacity}`, 'info');
+                    
+                    // Test button click
+                    button.click();
+                    log('✅ Button click simulated', 'success');
+                    
+                    setStatus('contentScriptStatus', '✅ Button Working', 
+                        `Position: ${button.style.top}, ${button.style.left}`, 'success');
+                } else {
+                    log('❌ Button not found', 'error');
+                    setStatus('contentScriptStatus', '❌ Button Missing', 'AI button element not found', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error testing button: ${error.message}`, 'error');
+                setStatus('contentScriptStatus', '❌ Error', error.message, 'error');
+            }
+        }
+
+        // Test Modal Creation
+        function testModalCreation() {
+            log('Testing Modal Creation...', 'info');
+            
+            try {
+                const modal = document.getElementById('answersai-modal');
+                if (modal) {
+                    log('✅ Modal exists', 'success');
+                    log(`Modal display: ${modal.style.display}`, 'info');
+                    
+                    // Test modal show/hide
+                    modal.style.display = 'block';
+                    log('✅ Modal shown', 'success');
+                    
+                    setTimeout(() => {
+                        modal.style.display = 'none';
+                        log('✅ Modal hidden', 'success');
+                    }, 1000);
+                    
+                    setStatus('contentScriptStatus', '✅ Modal Working', 'Modal creation and control working', 'success');
+                } else {
+                    log('❌ Modal not found', 'error');
+                    setStatus('contentScriptStatus', '❌ Modal Missing', 'AI modal element not found', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error testing modal: ${error.message}`, 'error');
+                setStatus('contentScriptStatus', '❌ Error', error.message, 'error');
+            }
+        }
+
+        // Check Extension Elements
+        function checkElements() {
+            const elementStatus = document.getElementById('elementStatus');
+            let statusHTML = '<ul>';
+            
+            // Check for button
+            const button = document.getElementById('answersai-button');
+            statusHTML += `<li>Button: ${button ? '✅ Found' : '❌ Missing'}</li>`;
+            
+            // Check for modal
+            const modal = document.getElementById('answersai-modal');
+            statusHTML += `<li>Modal: ${modal ? '✅ Found' : '❌ Missing'}</li>`;
+            
+            // Check for any extension-related elements
+            const allElements = document.querySelectorAll('*');
+            const extensionElements = Array.from(allElements).filter(el => 
+                el.id && (el.id.includes('ai') || el.id.includes('answer') || el.id.includes('modal'))
+            );
+            
+            statusHTML += `<li>Extension elements found: ${extensionElements.length}</li>`;
+            extensionElements.forEach(el => {
+                statusHTML += `<li style="margin-left: 20px;">- ${el.tagName}: #${el.id}</li>`;
+            });
+            
+            statusHTML += '</ul>';
+            elementStatus.innerHTML = statusHTML;
+            
+            log(`Element check complete: Button ${button ? 'found' : 'missing'}, Modal ${modal ? 'found' : 'missing'}`, 
+                button && modal ? 'success' : 'error');
+        }
+
+        // Clear logs
+        function clearLogs() {
+            logContainer.innerHTML = '';
+            log('Logs cleared', 'info');
+        }
+
+        // Run all tests
+        function testAll() {
+            log('🧪 Running all tests...', 'info');
+            clearLogs();
+            
+            setTimeout(() => testChromeAPIs(), 100);
+            setTimeout(() => testContentScript(), 300);
+            setTimeout(() => testBackgroundScript(), 500);
+            setTimeout(() => testMessagePassing(), 700);
+            setTimeout(() => testStorage(), 900);
+            setTimeout(() => testSelection(), 1100);
+            setTimeout(() => testButtonCreation(), 1300);
+            setTimeout(() => testModalCreation(), 1500);
+            setTimeout(() => checkElements(), 1700);
+            
+            log('✅ All tests initiated', 'success');
+        }
+
+        // Auto-run tests on page load
+        window.onload = function() {
+            log('Page loaded, running initial tests...', 'info');
+            setTimeout(testChromeAPIs, 500);
+            setTimeout(testContentScript, 1000);
+            setTimeout(testBackgroundScript, 1500);
+            setTimeout(checkElements, 2000);
+        };
+
+        // Listen for selection changes
+        document.addEventListener('selectionchange', function() {
+            const selection = window.getSelection();
+            if (selection.toString().trim().length > 0) {
+                log(`Selection changed: "${selection.toString().substring(0, 50)}..."`, 'info');
+                
+                // Check if button appears
+                setTimeout(() => {
+                    const button = document.getElementById('answersai-button');
+                    if (button && button.style.display !== 'none') {
+                        log('✅ AI button appeared after selection change', 'success');
+                    } else {
+                        log('❌ AI button did not appear after selection change', 'error');
+                    }
+                }, 100);
+            }
+        });
+
+        // Add click handler to test text
+        document.getElementById('testText').addEventListener('mouseup', function() {
+            log('Test text mouseup event fired', 'info');
+        });
+    </script>
+</body>
+</html>

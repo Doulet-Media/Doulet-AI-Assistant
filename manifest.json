@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Doulet AI Assistant",
-  "version": "2.4.3",
-  "description": "Get instant AI-powered answers when you highlight text on any webpage. This universal extension works seamlessly across all websites including Google Docs, Gmail, social media, and restricted sites. Features a minimal, non-intrusive design with smart positioning that doesn't block content. Use the non-conflicting Ctrl+Shift+Q hotkey or click the small floating button. Automatically discovers free AI models using your OpenRouter API key with intelligent keyword-based filtering. Supports multiple answer styles (concise, detailed, technical, casual) and languages. Privacy-focused with local storage and secure HTTPS communication. No data collection or tracking. Works offline with cached models and provides real-time connection status. Enhanced for Microsoft Edge with full Store compliance.",
+  "version": "3.0.0",
+  "description": "🤖 Instant AI Question Answerer - Get direct answers to any question with unlimited output. Perfect for students who want quick, accurate responses without extra explanations. Fast, lightweight, and non-intrusive. Works on all websites with instant results.",
   "author": "Doulet Media",
   "action": {
     "default_popup": "popup/popup.html",
@@ -16,24 +16,11 @@
       "css": ["content/content.css"],
       "run_at": "document_end",
       "all_frames": false,
-      "match_about_blank": true,
-      "include_globs": [
-        "https://docs.google.com/*",
-        "https://drive.google.com/*",
-        "https://mail.google.com/*",
-        "https://sheets.google.com/*",
-        "https://slides.google.com/*"
-      ],
-      "exclude_globs": [
-        "https://docs.google.com/document/d/*/edit?embedded=true*",
-        "https://docs.google.com/spreadsheets/d/*/edit?embedded=true*",
-        "https://docs.google.com/presentation/d/*/edit?embedded=true*"
-      ]
+      "match_about_blank": true
     }
   ],
   "background": {
-    "service_worker": "background/background.js",
-    "type": "module"
+    "service_worker": "background/background.js"
   },
   "permissions": [
     "storage",
@@ -43,16 +30,14 @@
     "tabs",
     "declarativeContent",
     "webNavigation",
-    "webRequest"
+    "webRequest",
+    "notifications",
+    "declarativeNetRequest",
+    "identity",
+    "unlimitedStorage"
   ],
   "host_permissions": [
-    "https://*.openrouter.ai/*",
-    "https://docs.google.com/*",
-    "https://drive.google.com/*",
-    "https://mail.google.com/*",
-    "https://sheets.google.com/*",
-    "https://slides.google.com/*",
-    "https://*.google.com/*"
+    "https://*.openrouter.ai/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
@@ -63,7 +48,7 @@
         "default": "Ctrl+Shift+Q",
         "mac": "Command+Shift+Q"
       },
-      "description": "Open Doulet AI Assistant"
+      "description": "Get AI Answer"
     }
   },
   "web_accessible_resources": [
@@ -82,7 +67,10 @@
         "content/content.js",
         "background/background.js",
         "icons/*.svg",
-        "icons/*.png"
+        "icons/*.png",
+        "assets/*.css",
+        "assets/*.js",
+        "assets/*.png"
       ],
       "matches": ["<all_urls>"]
     }

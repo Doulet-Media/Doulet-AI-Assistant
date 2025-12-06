@@ -1,4 +1,4 @@
-// Background script for Doulet AI Assistant extension
+// Background script for AI Question Answerer - Fast and Direct
 
 // Handle messages from popup and content scripts
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
@@ -44,7 +44,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     return true; // Keep message channel open for async response
 });
 
-// Get AI answer from OpenRouter
+// Enhanced AI answer with real-time thinking process
 async function getAIAnswer(request, sendResponse) {
     const { text, prompt, model, temperature, maxTokens } = request;
     
@@ -123,6 +123,95 @@ async function getAIAnswer(request, sendResponse) {
                 sendResponse({
                     success: false,
                     error: `Request timed out after ${(timeout / 1000)} seconds. Please try again or increase the timeout in settings.`
+                });
+            } else {
+                throw error;
+            }
+        }
+        
+    } catch (error) {
+        console.error('Error getting AI answer:', error);
+        sendResponse({
+            success: false,
+            error: error.message || 'Failed to get answer from OpenRouter'
+        });
+    }
+}
+
+// Simplified direct answer handler
+async function getDirectAnswer(request, sendResponse) {
+    const { text, prompt, model, temperature, maxTokens } = request;
+    
+    try {
+        let result = await chrome.storage.sync.get(['apiKey']);
+        let apiKey = result.apiKey;
+        
+        if (!apiKey) {
+            sendResponse({
+                success: false,
+                error: 'No API key found. Please enter your OpenRouter API key in the extension settings.'
+            });
+            return;
+        }
+        
+        const settingsResult = await chrome.storage.sync.get(['timeout']);
+        const timeout = (settingsResult.timeout || 60) * 1000; // Increased timeout for longer answers
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+        }, timeout);
+        
+        try {
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`,
+                    'HTTP-Referer': chrome.runtime.getURL(''),
+                    'X-Title': 'AI Question Answerer'
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: [
+                        {
+                            role: 'user',
+                            content: prompt
+                        }
+                    ],
+                    temperature: temperature,
+                    max_tokens: maxTokens,
+                    stream: false
+                }),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP error! Status: ${response.status} - ${errorText}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data && data.choices && data.choices.length > 0) {
+                const answer = data.choices[0].message.content;
+                sendResponse({
+                    success: true,
+                    answer: answer
+                });
+            } else {
+                throw new Error('Invalid response from OpenRouter API');
+            }
+            
+        } catch (error) {
+            clearTimeout(timeoutId);
+            
+            if (error.name === 'AbortError') {
+                sendResponse({
+                    success: false,
+                    error: `Request timed out after ${(timeout / 1000)} seconds. Try a shorter question.`
                 });
             } else {
                 throw error;
@@ -235,6 +324,107 @@ function validateExtensionContext() {
         return false;
     }
 }
+
+// Enhanced message listener for new features
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+    try {
+        if (request.action === 'getAnswer') {
+            getAIAnswer(request, sendResponse);
+            return true;
+        } else if (request.action === 'getStreamingAnswer') {
+            getStreamingAnswer(request, sendResponse);
+            return true;
+        } else if (request.action === 'testConnection') {
+            testConnection(request.apiKey, sendResponse);
+            return true;
+        } else if (request.action === 'getApiKey') {
+            chrome.storage.sync.get(['apiKey'], function(result) {
+                if (chrome.runtime.lastError) {
+                    console.error('Storage error:', chrome.runtime.lastError);
+                    sendResponse({ apiKey: '' });
+                    return;
+                }
+                sendResponse({ apiKey: result.apiKey || '' });
+            });
+            return true;
+        } else if (request.action === 'fetchFreeModels') {
+            updateFreeModelsList().then(models => {
+                sendResponse({ success: true, models: models });
+            }).catch(error => {
+                console.error('Failed to fetch free models:', error);
+                sendResponse({ success: false, error: error.message });
+            });
+            return true;
+        } else if (request.action === 'detectContent') {
+            const detection = detectQuizContent(request.text);
+            sendResponse({ success: true, detection: detection });
+            return true;
+        } else if (request.action === 'updateStats') {
+            updateStudyStats();
+            sendResponse({ success: true });
+            return true;
+        }
+    } catch (error) {
+        console.error('Error in message listener:', error);
+        if (sendResponse) {
+            try {
+                sendResponse({ success: false, error: 'Message handling failed' });
+            } catch (sendError) {
+                console.warn('Failed to send error response:', sendError);
+            }
+        }
+    }
+    return true;
+});
+
+// Handle keyboard shortcuts
+chrome.commands.onCommand.addListener(async function(command) {
+    if (command === 'toggle-study-mode') {
+        // Toggle study mode
+        const result = await chrome.storage.sync.get(['studyMode']);
+        const newMode = !result.studyMode;
+        await chrome.storage.sync.set({ studyMode: newMode });
+        
+        // Show notification
+        if (chrome.notifications && chrome.notifications.create) {
+            chrome.notifications.create({
+                type: 'basic',
+                iconUrl: chrome.runtime.getURL('icons/icon48.png'),
+                title: 'Study Mode ' + (newMode ? 'Enabled' : 'Disabled'),
+                message: newMode ? 'Enhanced study features activated!' : 'Study mode deactivated'
+            });
+        }
+    } else if (command === 'toggle-thinking') {
+        // Toggle thinking process
+        const result = await chrome.storage.sync.get(['enableThinking']);
+        const newThinking = !result.enableThinking;
+        await chrome.storage.sync.set({ enableThinking: newThinking });
+        
+        if (chrome.notifications && chrome.notifications.create) {
+            chrome.notifications.create({
+                type: 'basic',
+                iconUrl: chrome.runtime.getURL('icons/icon48.png'),
+                title: 'Thinking Process ' + (newThinking ? 'Enabled' : 'Disabled'),
+                message: newThinking ? 'Real-time thinking enabled!' : 'Thinking process disabled'
+            });
+        }
+    } else if (command === 'copy-answer') {
+        // Copy last answer with citation
+        const result = await chrome.storage.sync.get(['lastAnswer']);
+        if (result.lastAnswer) {
+            navigator.clipboard.writeText(result.lastAnswer).then(() => {
+                if (chrome.notifications && chrome.notifications.create) {
+                    chrome.notifications.create({
+                        type: 'basic',
+                        iconUrl: chrome.runtime.getURL('icons/icon48.png'),
+                        title: 'Answer Copied',
+                        message: 'Answer copied with citation!'
+                    });
+                }
+            });
+        }
+    }
+});
 
 // Removed automatic loading from file - users must enter API key manually in settings
 

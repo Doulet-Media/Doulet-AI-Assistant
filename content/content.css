@@ -1,4 +1,4 @@
-/* Doulet AI Assistant Content Styles */
+/* AI Question Answerer Content Styles */
 
 @keyframes spin {
     0% { transform: rotate(0deg); }
@@ -15,42 +15,65 @@
     50% { box-shadow: 0 0 0 10px rgba(102, 126, 234, 0); }
 }
 
-/* Answer button styles */
+/* Enhanced floating button */
 #answersai-button {
     position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 10000;
+    z-index: 1000000;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: none;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    border: none;
-    padding: 12px 16px;
-    border-radius: 50px;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 20px;
+    font-weight: bold;
     cursor: pointer;
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.35);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: none;
-    animation: pulseGlow 2s infinite;
+    opacity: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 #answersai-button:hover {
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 12px 30px rgba(102, 126, 234, 0.5);
-    animation-play-state: paused;
+    transform: translateY(-3px) scale(1.1);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+    z-index: 1000001;
 }
 
 #answersai-button:active {
-    transform: translateY(-1px) scale(0.98);
+    transform: translateY(0) scale(1);
 }
 
-#answersai-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+#answersai-button::after {
+    content: '🤖 Get AI Answer';
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    white-space: nowrap;
+    margin-bottom: 8px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s;
+    font-weight: 600;
 }
 
-/* Modal styles */
+#answersai-button:hover::after {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Enhanced modal styles */
 #answersai-modal .modal-overlay {
     position: fixed;
     top: 0;
@@ -81,125 +104,222 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
 }
 
 #answersai-modal .modal-header h3 {
     margin: 0;
-    color: #667eea;
+    font-size: 20px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#answersai-modal .modal-header h3::before {
+    content: '🤖';
     font-size: 18px;
 }
 
 #answersai-modal .close-btn {
-    background: none;
-    border: none;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     font-size: 24px;
     cursor: pointer;
-    color: #666;
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+#answersai-modal .close-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
 }
 
 #answersai-modal .modal-body {
-    padding: 20px;
-    max-height: 60vh;
+    padding: 25px;
+    max-height: 65vh;
     overflow-y: auto;
 }
 
 #answersai-modal .loading {
     text-align: center;
-    padding: 40px 20px;
+    padding: 50px 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    border: 1px solid #dee2e6;
 }
 
 #answersai-modal .spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #667eea;
+    width: 48px;
+    height: 48px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #667eea;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin: 0 auto 20px;
+    margin: 0 auto 25px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
 #answersai-modal .loading p {
     margin: 0;
-    color: #666;
-    font-size: 14px;
+    color: #495057;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+#answersai-modal .answer-container {
+    display: none;
+}
+
+#answersai-modal .answer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+#answersai-modal .answer-title {
+    font-weight: 600;
+    color: #495057;
+}
+
+#answersai-modal .model-badge {
+    background: #e9ecef;
+    color: #495057;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
 }
 
 #answersai-modal .answer {
-    line-height: 1.6;
-    color: #333;
-    font-size: 14px;
+    line-height: 1.7;
+    color: #212529;
+    font-size: 15px;
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e9ecef;
     white-space: pre-wrap;
 }
 
 #answersai-modal .error {
-    color: #dc3545;
+    color: #721c24;
     background: #f8d7da;
     border: 1px solid #f5c6cb;
-    padding: 15px;
-    border-radius: 8px;
-    margin: 10px 0;
+    padding: 18px;
+    border-radius: 12px;
+    margin: 15px 0;
+    box-shadow: 0 2px 10px rgba(220, 53, 69, 0.1);
+    display: none;
 }
 
 #answersai-modal .modal-footer {
-    padding: 15px 20px;
+    padding: 20px 25px;
     border-top: 1px solid #e0e0e0;
     display: flex;
-    gap: 10px;
+    gap: 12px;
     justify-content: flex-end;
-}
-
-#answersai-modal .copy-btn,
-#answersai-modal .close-footer-btn {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 13px;
+    background: #f8f9fa;
 }
 
 #answersai-modal .copy-btn {
-    background: #28a745;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
     color: white;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+#answersai-modal .copy-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
 }
 
 #answersai-modal .close-footer-btn {
-    background: #6c757d;
-    color: white;
-}
-
-/* Enhanced selection highlight */
-::selection {
-    background: linear-gradient(120deg, #667eea, #764ba2);
-    color: white;
-    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
-}
-
-/* Enhanced tooltip for the answer button */
-#answersai-button::after {
-    content: 'Get AI Answer (Ctrl+Shift+A) • 10+ Free Models';
-    position: absolute;
-    bottom: 100%;
-    right: 0;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 6px 10px;
-    border-radius: 6px;
-    font-size: 11px;
-    white-space: nowrap;
-    margin-bottom: 8px;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-    opacity: 0;
-    transform: translateY(10px);
-    transition: all 0.3s;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
     font-weight: 600;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
 }
 
-#answersai-button:hover::after {
-    opacity: 1;
-    transform: translateY(0);
+#answersai-modal .close-footer-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(108, 117, 125, 0.4);
 }
 
-/* Enhanced responsive adjustments */
+/* Selection blocking styles */
+#selection-blocker {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(220, 53, 69, 0.05);
+    pointer-events: none;
+    z-index: 99998;
+    border: 2px dashed rgba(220, 53, 69, 0.3);
+    display: none;
+}
+
+/* Enhanced selection styles for extension */
+.extension-selection {
+    background: linear-gradient(120deg, #667eea, #764ba2) !important;
+    color: white !important;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2) !important;
+    outline: 2px solid #ffc107 !important;
+    outline-offset: 2px !important;
+}
+
+/* Status indicators */
+#enhancement-status-indicator,
+#selection-block-indicator {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: #28a745;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 99999;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transition: all 0.3s;
+    animation: fadeIn 0.3s;
+}
+
+#selection-block-indicator {
+    left: 10px;
+    right: auto;
+}
+
+/* Responsive adjustments */
 @media (max-width: 768px) {
     #answersai-modal .modal-content {
         width: 95%;
@@ -226,41 +346,6 @@
     #answersai-modal .copy-btn,
     #answersai-modal .close-footer-btn {
         width: 100%;
-    }
-}
-
-/* Tooltip for the answer button */
-#answersai-button::after {
-    content: 'Get AI Answer (Ctrl+Shift+A)';
-    position: absolute;
-    bottom: 100%;
-    right: 0;
-    background: #333;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    white-space: nowrap;
-    margin-bottom: 8px;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-#answersai-button:hover::after {
-    opacity: 1;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    #answersai-modal .modal-content {
-        width: 95%;
-        max-width: none;
-    }
-    
-    #answersai-button {
-        bottom: 20px;
-        top: auto;
-        right: 20px;
     }
 }
 
