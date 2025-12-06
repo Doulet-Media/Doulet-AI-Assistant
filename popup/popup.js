@@ -346,4 +346,144 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Failed to refresh models in popup:', error);
         }
     }
+
+    // Documentation modal functionality
+    const quickStartLink = document.getElementById('quickStartLink');
+    const troubleshootingLink = document.getElementById('troubleshootingLink');
+    const privacyLink = document.getElementById('privacyLink');
+    const docModal = document.getElementById('docModal');
+    const closeModal = document.getElementById('closeModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalContent = document.getElementById('modalContent');
+
+    // Quick Start Guide content
+    const quickStartContent = `
+        <h3>🚀 Quick Start Guide</h3>
+        <ol>
+            <li><strong>Get Your Free API Key:</strong> Visit openrouter.ai and sign up for a free account</li>
+            <li><strong>Enter API Key:</strong> Click the Doulet AI Assistant extension icon and enter your API key</li>
+            <li><strong>Test Connection:</strong> Click "Test Connection" to verify your API key and fetch available models</li>
+            <li><strong>Select Model:</strong> Choose your preferred AI model from the automatically populated list</li>
+            <li><strong>Start Using:</strong> Highlight any text on a webpage and click the floating AI button or press Ctrl+Shift+Q</li>
+        </ol>
+        
+        <h3>💡 Tips:</h3>
+        <ul>
+            <li>Models are automatically discovered and updated in real-time</li>
+            <li>All models listed are completely free to use</li>
+            <li>Works on all websites including Google Docs, Gmail, and restricted sites</li>
+            <li>Non-intrusive design that doesn't block your content</li>
+        </ul>
+    `;
+
+    // Troubleshooting content
+    const troubleshootingContent = `
+        <h3>🔧 Troubleshooting</h3>
+        
+        <h3>API Connection Issues</h3>
+        <ul>
+            <li><strong>"Invalid API Key" Error:</strong> Double-check your API key for typos, make sure you're using a valid OpenRouter API key</li>
+            <li><strong>"Connection Failed" Error:</strong> Check your internet connection, ensure OpenRouter.ai is accessible in your region</li>
+        </ul>
+        
+        <h3>Performance Issues</h3>
+        <ul>
+            <li><strong>Slow Responses:</strong> Try a different AI model (some are faster than others), reduce the max response length, check your internet connection</li>
+            <li><strong>High Memory Usage:</strong> Use smaller models like Nova 2 Lite, reduce max tokens setting</li>
+        </ul>
+        
+        <h3>Extension Issues</h3>
+        <ul>
+            <li><strong>Extension Not Working:</strong> Make sure the extension is enabled, check that you have the latest version</li>
+            <li><strong>Button Not Appearing:</strong> Check that "Show Answer Button" is enabled in options, refresh the webpage</li>
+        </ul>
+        
+        <h3>Need Help?</h3>
+        <ul>
+            <li>Check this README for common solutions</li>
+            <li>Report bugs or request features through the extension options</li>
+        </ul>
+    `;
+
+    // Privacy Policy content
+    const privacyContent = `
+        <h3>🔒 Privacy Policy</h3>
+        
+        <h3>Our Commitment to Privacy</h3>
+        <p><strong>No Data Collection:</strong> We don't collect or store any of your personal data</p>
+        <p><strong>Local Storage:</strong> Your API key is stored locally in your browser only</p>
+        <p><strong>Secure Communication:</strong> All API calls use HTTPS encryption</p>
+        <p><strong>OpenRouter Privacy:</strong> Your usage is covered by OpenRouter's privacy policy</p>
+        
+        <h3>What We Don't Collect</h3>
+        <ul>
+            <li>No personal information (name, email, etc.)</li>
+            <li>No browsing history or website data</li>
+            <li>No text content of your selections</li>
+            <li>No AI responses or interactions</li>
+        </ul>
+        
+        <h3>Your Data</h3>
+        <p>Your API key is stored locally in your browser and is never transmitted to our servers or shared with third parties. You can delete it at any time by clearing your browser's extension data.</p>
+    `;
+
+    // Modal event handlers
+    if (quickStartLink) {
+        quickStartLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            showModal('🚀 Quick Start Guide', quickStartContent);
+        });
+    }
+
+    if (troubleshootingLink) {
+        troubleshootingLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            showModal('🔧 Troubleshooting', troubleshootingContent);
+        });
+    }
+
+    if (privacyLink) {
+        privacyLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            showModal('🔒 Privacy Policy', privacyContent);
+        });
+    }
+
+    if (closeModal) {
+        closeModal.addEventListener('click', function() {
+            hideModal();
+        });
+    }
+
+    // Close modal when clicking outside
+    docModal.addEventListener('click', function(e) {
+        if (e.target === docModal) {
+            hideModal();
+        }
+    });
+
+    // Keyboard support (Escape key)
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && docModal.style.display === 'block') {
+            hideModal();
+        }
+    });
+
+    function showModal(title, content) {
+        modalTitle.textContent = title;
+        modalContent.innerHTML = content;
+        docModal.style.display = 'block';
+        
+        // Add animation
+        setTimeout(() => {
+            docModal.style.opacity = '1';
+        }, 10);
+    }
+
+    function hideModal() {
+        docModal.style.opacity = '0';
+        setTimeout(() => {
+            docModal.style.display = 'none';
+        }, 300);
+    }
 });

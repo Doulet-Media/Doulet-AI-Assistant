@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Doulet AI Assistant",
-  "version": "2.4.2",
+  "version": "2.4.3",
   "description": "Get instant AI-powered answers when you highlight text on any webpage. This universal extension works seamlessly across all websites including Google Docs, Gmail, social media, and restricted sites. Features a minimal, non-intrusive design with smart positioning that doesn't block content. Use the non-conflicting Ctrl+Shift+Q hotkey or click the small floating button. Automatically discovers free AI models using your OpenRouter API key with intelligent keyword-based filtering. Supports multiple answer styles (concise, detailed, technical, casual) and languages. Privacy-focused with local storage and secure HTTPS communication. No data collection or tracking. Works offline with cached models and provides real-time connection status. Enhanced for Microsoft Edge with full Store compliance.",
   "author": "Doulet Media",
   "action": {
