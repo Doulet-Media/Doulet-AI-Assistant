@@ -2,7 +2,7 @@
 
 A powerful web extension that provides AI-powered answers when you highlight text on any webpage. Developed by Doulet Media using completely free OpenRouter AI models.
 
-![Doulet AI Assistant](https://img.shields.io/badge/Doulet%20AI%20Assistant-v2.4.0-blue)
+![Doulet AI Assistant](https://img.shields.io/badge/Doulet%20AI%20Assistant-v2.4.1-blue)
 ![Free Models](https://img.shields.io/badge/Models-All%20Free%20Models-green)
 ![Privacy](https://img.shields.io/badge/Privacy-100%25%20Local-red)
 ![OpenRouter](https://img.shields.io/badge/OpenRouter-Compatible-brightgreen)
@@ -176,7 +176,7 @@ This extension is developed by Doulet Media. While this is a complete implementa
 
 ## Changelog
 
-### v2.4.0 (Latest Enhancement)
+### v2.4.1 (Latest Enhancement - Bug Fix)
 - **Enhanced Model Fetching**: Improved algorithm to fetch ALL free models from OpenRouter
 - **Automatic Model Discovery**: Models are automatically fetched when API key is entered
 - **Smart Filtering**: Enhanced filtering to include all models with "free" in their names
