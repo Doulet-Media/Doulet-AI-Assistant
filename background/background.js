@@ -138,8 +138,8 @@ async function getAIAnswer(request, sendResponse) {
     }
 }
 
-// Simplified direct answer handler
-async function getDirectAnswer(request, sendResponse) {
+// Enhanced unlimited answer handler
+async function getUnlimitedAnswer(request, sendResponse) {
     const { text, prompt, model, temperature, maxTokens } = request;
     
     try {
@@ -155,7 +155,7 @@ async function getDirectAnswer(request, sendResponse) {
         }
         
         const settingsResult = await chrome.storage.sync.get(['timeout']);
-        const timeout = (settingsResult.timeout || 60) * 1000; // Increased timeout for longer answers
+        const timeout = (settingsResult.timeout || 120) * 1000; // 2 minutes for unlimited answers
         
         const controller = new AbortController();
         const timeoutId = setTimeout(() => {
@@ -169,7 +169,8 @@ async function getDirectAnswer(request, sendResponse) {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${apiKey}`,
                     'HTTP-Referer': chrome.runtime.getURL(''),
-                    'X-Title': 'AI Question Answerer'
+                    'X-Title': 'AI Question Answerer - Unlimited Mode',
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify({
                     model: model,
@@ -179,8 +180,8 @@ async function getDirectAnswer(request, sendResponse) {
                             content: prompt
                         }
                     ],
-                    temperature: temperature,
-                    max_tokens: maxTokens,
+                    temperature: temperature || 0.7,
+                    max_tokens: maxTokens || 2000,  // Unlimited tokens
                     stream: false
                 }),
                 signal: controller.signal
@@ -197,12 +198,22 @@ async function getDirectAnswer(request, sendResponse) {
             
             if (data && data.choices && data.choices.length > 0) {
                 const answer = data.choices[0].message.content;
+                
+                // Enhanced response validation
+                if (!answer || answer.trim().length === 0) {
+                    // Try to get more detailed error information
+                    const errorInfo = data.error || 'Empty response from AI';
+                    throw new Error(`AI returned empty response: ${errorInfo}`);
+                }
+                
                 sendResponse({
                     success: true,
-                    answer: answer
+                    answer: answer,
+                    model: model,
+                    tokens_used: data.usage?.total_tokens || 0
                 });
             } else {
-                throw new Error('Invalid response from OpenRouter API');
+                throw new Error('Invalid response from OpenRouter API - no choices returned');
             }
             
         } catch (error) {
@@ -211,10 +222,14 @@ async function getDirectAnswer(request, sendResponse) {
             if (error.name === 'AbortError') {
                 sendResponse({
                     success: false,
-                    error: `Request timed out after ${(timeout / 1000)} seconds. Try a shorter question.`
+                    error: `Request timed out after ${(timeout / 1000)} seconds. The question may be too complex or the model is slow. Try breaking it into smaller parts.`
                 });
             } else {
-                throw error;
+                console.error('Detailed error:', error);
+                sendResponse({
+                    success: false,
+                    error: `Failed to get answer: ${error.message}. Check your API key and internet connection.`
+                });
             }
         }
         
@@ -222,9 +237,68 @@ async function getDirectAnswer(request, sendResponse) {
         console.error('Error getting AI answer:', error);
         sendResponse({
             success: false,
-            error: error.message || 'Failed to get answer from OpenRouter'
+            error: `Extension error: ${error.message}. Please reload the extension and try again.`
         });
     }
+}
+
+// Advanced prompt enhancement for better responses
+function enhancePromptForUnlimitedAnswer(text, settings) {
+    let prompt = '';
+    
+    // Add custom prompt if provided
+    if (settings.customPrompt && settings.customPrompt.trim()) {
+        prompt += settings.customPrompt.trim() + '\n\n';
+    } else {
+        // Enhanced prompt for comprehensive, unlimited answers
+        prompt = `You are an expert AI assistant providing comprehensive answers for students.
+        Answer the following question with the most detailed, accurate, and complete response possible.
+        
+        REQUIREMENTS:
+        - Provide the complete answer without token limitations
+        - Include all relevant information, examples, and details
+        - Do not provide introductions, conclusions, or explanations
+        - Do not summarize or omit any information
+        - Focus on delivering the full, comprehensive answer
+        - Use clear, structured formatting when appropriate
+        - Include examples, facts, and supporting details
+        - Ensure the answer is thorough and complete
+        
+        QUESTION:
+        "${text}"
+        
+        ANSWER (comprehensive and unlimited):`;
+    }
+    
+    // Add language preference if set
+    if (settings.language && settings.language !== 'auto') {
+        const languageMap = {
+            'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
+            'it': 'Italian', 'pt': 'Portuguese', 'ru': 'Russian', 'zh': 'Chinese',
+            'ja': 'Japanese', 'ko': 'Korean'
+        };
+        prompt += `\n\nIMPORTANT: Respond in ${languageMap[settings.language]} and ensure all examples and explanations are culturally appropriate.`;
+    }
+    
+    // Add style preference for better formatting
+    if (settings.answerStyle) {
+        switch(settings.answerStyle) {
+            case 'detailed':
+                prompt += `\n\nFORMAT: Use detailed explanations, multiple examples, and thorough coverage of all aspects.`;
+                break;
+            case 'technical':
+                prompt += `\n\nFORMAT: Use technical language, precise terminology, and include relevant formulas, data, and specifications.`;
+                break;
+            case 'concise':
+                prompt += `\n\nFORMAT: Be comprehensive but avoid unnecessary verbosity. Focus on key points with brief examples.`;
+                break;
+            case 'casual':
+                prompt += `\n\nFORMAT: Use conversational tone while maintaining completeness and accuracy.`;
+                break;
+        }
+    }
+    
+    return prompt;
 }
 
 // Test connection to OpenRouter

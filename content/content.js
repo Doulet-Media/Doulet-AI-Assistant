@@ -791,8 +791,8 @@ async function getAIAnswer(text) {
     answer.style.display = 'none';
     error.style.display = 'none';
     
-    // Add timeout for the API request (increased for longer answers)
-    const timeout = settings.timeout || 60;
+    // Add timeout for the API request (increased for unlimited answers)
+    const timeout = settings.timeout || 120;  // 2 minutes for unlimited responses
     const requestTimeout = setTimeout(() => {
         if (isProcessing) {
             isProcessing = false;
@@ -839,7 +839,7 @@ async function getAIAnswer(text) {
         prompt: prompt,
         model: settings.model || 'amazon/nova-2-lite-v1:free',
         temperature: settings.temperature || 0.7,
-        maxTokens: settings.maxTokens || 800  // Increased for longer answers
+        maxTokens: settings.maxTokens || 2000  // Unlimited output for students
     }, function(response) {
         clearTimeout(requestTimeout);
         isProcessing = false;
