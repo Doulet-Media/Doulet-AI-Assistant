@@ -1,6 +1,6 @@
 # Universal Compatibility Guide - Doulet AI Assistant
 
-This guide explains the universal compatibility features added in version 2.2.0 of the Doulet AI Assistant extension.
+This guide explains the universal compatibility features and latest enhancements added in version 2.4.0 of the Doulet AI Assistant extension.
 
 ## 🌐 Universal Website Support
 
@@ -73,6 +73,24 @@ The extension now works on sites with strict content security policies:
 2. Shows pulse animation if no text selected
 3. Provides visual feedback
 4. Works across all supported websites
+```
+
+## 🤖 Enhanced Model Discovery
+
+### Automatic Free Model Fetching
+The extension now automatically discovers ALL free models from OpenRouter:
+
+- **Real-time Discovery**: Fetches models when API key is entered
+- **Smart Filtering**: Includes all models with "free" in their names
+- **Multiple Criteria**: Uses enhanced filtering algorithm
+- **Automatic Updates**: Gets latest free models without manual intervention
+
+### Enhanced Filtering Algorithm
+```javascript
+// Optimized filtering criteria (most reliable method):
+1. Primary Filter: Check pricing object - free models have prompt = "0" and completion = "0"
+2. Secondary Filter: Check for ":free" suffix in model ID (common naming convention)
+3. Tertiary Filter: Check for "free" keyword in model name or ID
 ```
 
 ## 🔧 Technical Enhancements
@@ -161,7 +179,24 @@ The new Ctrl+Shift+Q should have minimal conflicts, but if issues persist:
 - **CPU Optimized**: Minimal event listeners
 - **Network Smart**: Caches model lists and settings
 
-## 🔮 Future Enhancements
+## 🚀 Version 2.4.0 Enhancements
+
+### Key Improvements
+- **Enhanced Model Fetching**: Improved algorithm to fetch ALL free models
+- **Automatic Discovery**: Models fetched automatically when API key is entered
+- **Smart Filtering**: Enhanced filtering to include all models with "free" in their names
+- **Real-time Updates**: Get latest free models without manual intervention
+- **Better Error Handling**: Improved connection and model fetching error handling
+- **Version Update**: Updated to v2.4.0
+
+### Technical Details
+- **Background Script**: Enhanced getFreeModels() function
+- **Message Handling**: New fetchFreeModels action
+- **Popup Integration**: Automatic model fetching on connection test
+- **Options Page**: Enhanced model population
+- **Error Handling**: Better error messages and fallbacks
+
+##  Future Enhancements
 
 ### Planned Universal Features
 - **Dark Mode Detection**: Automatic theme adaptation

@@ -8,9 +8,12 @@ function getModelDisplayName(modelId) {
     return modelId;
 }
 
+// Enhanced selection and visibility features
 let currentSelection = '';
 let isProcessing = false;
 let settings = {};
+let isSelectionEnhanced = false;
+let originalSelectionStyles = new Map();
 
 // Load settings
 chrome.storage.sync.get(null, function(result) {
@@ -337,10 +340,24 @@ function copyAnswer() {
 }
 
 // Handle text selection
-document.addEventListener('mouseup', function() {
+document.addEventListener('mouseup', function(e) {
     const selection = window.getSelection();
-    if (selection.toString().trim().length > 0) {
-        currentSelection = selection.toString().trim();
+    const selectedText = selection.toString().trim();
+    
+    // Enhanced selection validation
+    if (selectedText.length > 0) {
+        // Validate selection quality
+        if (selectedText.length < 3 && !/[a-zA-Z]/.test(selectedText)) {
+            // Too short or only numbers/symbols, ignore
+            return;
+        }
+        
+        currentSelection = selectedText;
+        
+        // Enhance selection visibility if enabled
+        if (settings.enableSelectionEnhancement && !isSelectionEnhanced) {
+            enhanceSelectionVisibility();
+        }
         
         const button = document.getElementById('answersai-button') || createAnswerButton();
         if (button) {
@@ -377,12 +394,282 @@ document.addEventListener('mouseup', function() {
         if (button) {
             button.style.display = 'none';
         }
+        
+        // Reset selection enhancement when no text selected
+        if (isSelectionEnhanced) {
+            resetSelectionVisibility();
+        }
     }
 });
+
+// Enhance selection visibility
+function enhanceSelectionVisibility() {
+    try {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+        
+        const range = selection.getRangeAt(0);
+        const selectedNodes = getSelectedNodes(range);
+        
+        // Store original styles and enhance visibility
+        selectedNodes.forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                const computedStyle = window.getComputedStyle(node);
+                originalSelectionStyles.set(node, {
+                    backgroundColor: computedStyle.backgroundColor,
+                    color: computedStyle.color,
+                    fontWeight: computedStyle.fontWeight
+                });
+                
+                // Enhanced selection styling
+                node.style.backgroundColor = '#fff3cd'; // Light yellow background
+                node.style.color = '#856404'; // Darker text for contrast
+                node.style.fontWeight = '600'; // Bold text
+                node.style.outline = '2px solid #ffc107'; // Orange outline
+                node.style.outlineOffset = '2px';
+            }
+        });
+        
+        isSelectionEnhanced = true;
+    } catch (error) {
+        console.warn('Failed to enhance selection visibility:', error);
+    }
+}
+
+// Reset selection visibility
+function resetSelectionVisibility() {
+    try {
+        originalSelectionStyles.forEach((originalStyle, node) => {
+            try {
+                if (node && node.style) {
+                    node.style.backgroundColor = originalStyle.backgroundColor;
+                    node.style.color = originalStyle.color;
+                    node.style.fontWeight = originalStyle.fontWeight;
+                    node.style.outline = '';
+                    node.style.outlineOffset = '';
+                }
+            } catch (nodeError) {
+                console.warn('Failed to reset node styling:', nodeError);
+            }
+        });
+        
+        originalSelectionStyles.clear();
+        isSelectionEnhanced = false;
+    } catch (error) {
+        console.warn('Failed to reset selection visibility:', error);
+    }
+}
+
+// Enhanced Google Workspace compatibility
+function enhanceGoogleWorkspaceSupport() {
+    // Handle Google Docs specific elements
+    if (window.location.hostname === 'docs.google.com') {
+        // Add mutation observer for dynamic content
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList') {
+                    // Re-apply styles to new content
+                    const newNodes = Array.from(mutation.addedNodes);
+                    newNodes.forEach(node => {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            // Ensure our button and modal can be created in Google Docs
+                            try {
+                                createAnswerButton();
+                                createAnswerModal();
+                            } catch (error) {
+                                console.warn('Failed to create elements in Google Docs:', error);
+                            }
+                        }
+                    });
+                }
+            });
+        });
+        
+        // Observe document body for changes
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+        
+        // Handle Google Docs iframe issues
+        if (window.self !== window.top) {
+            // We're in an iframe, try to access parent
+            try {
+                if (window.parent && window.parent.document) {
+                    // Create elements in parent document if possible
+                    const parentDoc = window.parent.document;
+                    if (parentDoc && parentDoc.body) {
+                        // This helps with Google Docs embedded content
+                        console.log('Enhanced Google Docs iframe support enabled');
+                    }
+                }
+            } catch (error) {
+                console.warn('Google Docs iframe access restricted:', error);
+            }
+        }
+    }
+    
+    // Handle Gmail specific elements
+    if (window.location.hostname === 'mail.google.com') {
+        // Gmail often uses shadow DOM and complex structures
+        // Add special handling for Gmail content areas
+        const gmailContentAreas = [
+            '.adn', // Gmail message content
+            '.gs',  // Gmail subject and headers
+            '.gE'   // Gmail message body
+        ];
+        
+        gmailContentAreas.forEach(selector => {
+            try {
+                const elements = document.querySelectorAll(selector);
+                elements.forEach(element => {
+                    // Ensure our extension can interact with Gmail content
+                    element.style.userSelect = 'text';
+                    element.style.webkitUserSelect = 'text';
+                });
+            } catch (error) {
+                console.warn('Failed to enhance Gmail content area:', error);
+            }
+        });
+    }
+    
+    // Handle Google Sheets
+    if (window.location.hostname === 'sheets.google.com') {
+        // Google Sheets has complex cell selection
+        // Add special handling for spreadsheet data
+        console.log('Enhanced Google Sheets support enabled');
+    }
+}
+
+// Initialize Google Workspace support
+enhanceGoogleWorkspaceSupport();
+
+// Get all nodes within a selection range
+function getSelectedNodes(range) {
+    const nodes = [];
+    const walker = document.createTreeWalker(
+        range.commonAncestorContainer,
+        NodeFilter.SHOW_ELEMENT,
+        {
+            acceptNode: function(node) {
+                const nodeRange = document.createRange();
+                nodeRange.selectNodeContents(node);
+                
+                if (range.intersectsNode(node)) {
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+                return NodeFilter.FILTER_REJECT;
+            }
+        }
+    );
+    
+    let node;
+    while (node = walker.nextNode()) {
+        nodes.push(node);
+    }
+    
+    return nodes;
+}
+
+// Enhanced selection visibility with safe DOM operations
+function enhanceSelectionVisibility() {
+    try {
+        // Check if extension context is still valid
+        if (!chrome || !chrome.runtime) {
+            console.warn('Extension context invalidated, skipping selection enhancement');
+            return;
+        }
+        
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+        
+        const range = selection.getRangeAt(0);
+        const selectedNodes = getSelectedNodes(range);
+        
+        // Store original styles and enhance visibility
+        selectedNodes.forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                try {
+                    const computedStyle = window.getComputedStyle(node);
+                    originalSelectionStyles.set(node, {
+                        backgroundColor: computedStyle.backgroundColor,
+                        color: computedStyle.color,
+                        fontWeight: computedStyle.fontWeight
+                    });
+                    
+                    // Enhanced selection styling
+                    node.style.backgroundColor = '#fff3cd'; // Light yellow background
+                    node.style.color = '#856404'; // Darker text for contrast
+                    node.style.fontWeight = '600'; // Bold text
+                    node.style.outline = '2px solid #ffc107'; // Orange outline
+                    node.style.outlineOffset = '2px';
+                } catch (nodeError) {
+                    console.warn('Failed to enhance node styling:', nodeError);
+                }
+            }
+        });
+        
+        isSelectionEnhanced = true;
+    } catch (error) {
+        console.warn('Failed to enhance selection visibility:', error);
+    }
+}
+
+// Reset selection visibility with safe DOM operations
+function resetSelectionVisibility() {
+    try {
+        // Check if extension context is still valid
+        if (!chrome || !chrome.runtime) {
+            console.warn('Extension context invalidated, skipping selection reset');
+            return;
+        }
+        
+        originalSelectionStyles.forEach((originalStyle, node) => {
+            try {
+                if (node && node.style) {
+                    node.style.backgroundColor = originalStyle.backgroundColor;
+                    node.style.color = originalStyle.color;
+                    node.style.fontWeight = originalStyle.fontWeight;
+                    node.style.outline = '';
+                    node.style.outlineOffset = '';
+                }
+            } catch (nodeError) {
+                console.warn('Failed to reset node styling:', nodeError);
+            }
+        });
+        
+        originalSelectionStyles.clear();
+        isSelectionEnhanced = false;
+    } catch (error) {
+        console.warn('Failed to reset selection visibility:', error);
+    }
+}
 
 // Get AI answer
 async function getAIAnswer(text) {
     if (isProcessing) return;
+    
+    // Enhanced text validation
+    if (!text || text.trim().length === 0) {
+        alert('Please select some text to get an AI answer.');
+        return;
+    }
+    
+    // Further validate text quality
+    const cleanText = text.trim();
+    if (cleanText.length < 3) {
+        alert('Please select more text (minimum 3 characters).');
+        return;
+    }
+    
+    // Check for meaningful content
+    const meaningfulContent = /[a-zA-Z\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\u0400-\u04FF]/.test(cleanText);
+    if (!meaningfulContent && !/[0-9]/.test(cleanText)) {
+        alert('Please select text with letters or numbers.');
+        return;
+    }
+    
+    currentSelection = cleanText;
     
     // Load API key from storage or file
     let apiKey = settings.apiKey;
@@ -499,7 +786,7 @@ async function getAIAnswer(text) {
     
     chrome.runtime.sendMessage({
         action: 'getAnswer',
-        text: text,
+        text: currentSelection,
         prompt: prompt,
         model: settings.model || 'amazon/nova-2-lite-v1:free',
         temperature: settings.temperature || 0.7,
@@ -512,7 +799,19 @@ async function getAIAnswer(text) {
             loading.style.display = 'none';
             answerContainer.style.display = 'block';
             answer.style.display = 'block';
-            answer.textContent = response.answer;
+            
+            // Enhanced response validation
+            const answerText = response.answer || '';
+            if (!answerText || answerText.trim().length === 0) {
+                error.style.display = 'block';
+                error.textContent = 'Received empty response from AI. Please try again or select different text.';
+                answerContainer.style.display = 'none';
+                return;
+            }
+            
+            // Clean and display answer
+            const cleanAnswer = answerText.replace(/^\s*[\r\n]+/gm, '\n').trim();
+            answer.textContent = cleanAnswer;
             
             // Play sound if enabled
             if (settings.enableSounds) {
@@ -521,7 +820,10 @@ async function getAIAnswer(text) {
         } else {
             loading.style.display = 'none';
             error.style.display = 'block';
-            error.textContent = response ? response.error : 'Failed to get answer. Please check your API key and try again.';
+            const errorMessage = response && response.error
+                ? response.error
+                : 'Failed to get answer. Please check your API key, internet connection, and try again.';
+            error.textContent = errorMessage;
         }
     });
 }
@@ -565,6 +867,72 @@ async function getApiKeyFromBackground() {
 
 // Keyboard shortcut (Ctrl+Shift+Q)
 document.addEventListener('keydown', function(e) {
+    // Check extension context before processing
+    if (!chrome || !chrome.runtime) {
+        console.warn('Extension context invalidated, ignoring keyboard shortcut');
+        return;
+    }
+    
+    // Toggle selection enhancement with Ctrl+Shift+E
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'e') {
+        e.preventDefault();
+        
+        // Check if extension context is valid before accessing chrome API
+        if (!chrome || !chrome.storage || !chrome.storage.sync) {
+            console.warn('Extension context invalidated, cannot toggle selection enhancement');
+            return;
+        }
+        
+        settings.enableSelectionEnhancement = !settings.enableSelectionEnhancement;
+        
+        // Show toggle status
+        const status = settings.enableSelectionEnhancement ? 'ON' : 'OFF';
+        const color = settings.enableSelectionEnhancement ? '#28a745' : '#dc3545';
+        
+        let indicator = document.getElementById('enhancement-status-indicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'enhancement-status-indicator';
+            indicator.style.cssText = `
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                background: ${color};
+                color: white;
+                padding: 8px 16px;
+                border-radius: 20px;
+                font-size: 12px;
+                font-weight: bold;
+                z-index: 99999;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                transition: all 0.3s;
+            `;
+            document.body.appendChild(indicator);
+        }
+        
+        indicator.style.background = color;
+        indicator.textContent = `Selection Enhancement: ${status}`;
+        
+        if (settings.enableSelectionEnhancement) {
+            // Apply enhancement to current selection if any
+            const selection = window.getSelection();
+            if (selection.toString().trim().length > 0) {
+                enhanceSelectionVisibility();
+            }
+        } else {
+            // Reset selection styling
+            resetSelectionVisibility();
+        }
+        
+        setTimeout(() => {
+            if (indicator) {
+                indicator.style.opacity = '0';
+                setTimeout(() => indicator.remove(), 300);
+            }
+        }, 2000);
+    }
+    
+    // Original Ctrl+Shift+Q functionality
     if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'q') {
         e.preventDefault();
         const selection = window.getSelection();

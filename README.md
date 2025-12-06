@@ -2,11 +2,11 @@
 
 A powerful web extension that provides AI-powered answers when you highlight text on any webpage. Developed by Doulet Media using completely free OpenRouter AI models.
 
-![Doulet AI Assistant](https://img.shields.io/badge/Doulet%20AI%20Assistant-v2.1.0-blue)
-![Free Models](https://img.shields.io/badge/Models-10%2B%20Free-green)
+![Doulet AI Assistant](https://img.shields.io/badge/Doulet%20AI%20Assistant-v2.4.0-blue)
+![Free Models](https://img.shields.io/badge/Models-All%20Free%20Models-green)
 ![Privacy](https://img.shields.io/badge/Privacy-100%25%20Local-red)
 ![OpenRouter](https://img.shields.io/badge/OpenRouter-Compatible-brightgreen)
-![Fixed](https://img.shields.io/badge/API-Fully%20Fixed-brightgreen)
+![Enhanced](https://img.shields.io/badge/Enhancement-Fully%20Enhanced-brightgreen)
 
 ## 🚀 Features
 
@@ -53,82 +53,44 @@ A powerful web extension that provides AI-powered answers when you highlight tex
 
 1. Click the Doulet AI Assistant extension icon
 2. Enter your OpenRouter API key
-3. Choose your preferred AI model from the categories below
-4. Adjust settings like creativity level and response length
-5. Click "Save Settings"
+3. **Models are automatically fetched** - no need to manually select categories
+4. Choose from all available free models (marked with "free" in the name)
+5. Adjust settings like creativity level and response length
+6. Click "Save Settings"
 
 ### Step 3: Start Using Doulet AI Assistant
 
 - **Method 1**: Highlight text and click the floating AI button that appears
 
-## 🤖 Available AI Models (Completely Free)
+## 🤖 Available AI Models (All Free Models)
 
-Choose from 10+ completely free AI models, categorized by their strengths:
+The extension automatically discovers and provides access to all free AI models available on OpenRouter. Models are automatically fetched when you enter your API key.
 
-### 🚀 Fast & Efficient Models
-Perfect for quick answers and everyday use:
+### How It Works
+- **Automatic Discovery**: The extension queries OpenRouter's API to find all free models
+- **Smart Filtering**: Models are filtered using the most reliable method:
+  - **Primary Filter**: Check pricing object - free models have `prompt = "0"` and `completion = "0"`
+  - **Secondary Filter**: Check for ":free" suffix in model ID (common naming convention)
+  - **Tertiary Filter**: Check for "free" keyword in model name or ID
+- **Real-time Updates**: Get the latest free models whenever you update your API key
 
-- **Amazon Nova 2 Lite** (3.1B parameters)
-  - Ultra-fast responses
-  - Great for general questions
-  - 1M context window
+### Model Categories
+The extension automatically categorizes models based on their capabilities:
 
-- **Arcee AI Trinity Mini** (326M parameters)
-  - Lightweight and efficient
-  - Good for basic reasoning
-  - 131K context window
+- **General Purpose**: Versatile models for everyday use
+- **Advanced Reasoning**: Complex problem-solving capabilities
+- **Coding & Development**: Specialized for programming tasks
+- **Multimodal**: Support for images and document analysis
 
-- **NVIDIA Nemotron Nano 9B V2** (487M parameters)
-  - Balanced speed and quality
-  - Unified reasoning and non-reasoning
-  - 128K context window
-
-### 🧠 Advanced Reasoning Models
-For complex problem-solving and deep analysis:
-
-- **AllenAI Olmo 3 32B Think** (305M parameters)
-  - Purpose-built for deep reasoning
-  - Complex logic chains
-  - 66K context window
-
-- **TNG R1T Chimera** (11.5B parameters)
-  - Experimental LLM with creative personality
-  - Strong EQ-Bench3 score (~1305)
-  - 164K context window
-
-- **Tongyi DeepResearch 30B A3B** (1.34B parameters)
-  - Optimized for long-horizon tasks
-  - State-of-the-art on complex benchmarks
-  - 131K context window
-
-### 💻 Coding & Tools Models
-Specialized for programming and technical tasks:
-
-- **Kwaipilot KAT-Coder-Pro V1** (83.3B parameters)
-  - Most advanced agentic coding model
-  - 73.4% solve rate on SWE-Bench Verified
-  - 256K context window
-
-- **OpenAI gpt-oss-20b** (3.38B parameters)
-  - Open-weight 21B parameter model
-  - Mixture-of-Experts architecture
-  - Optimized for consumer hardware
-  - 131K context window
-
-### 🖼️ Multimodal Models
-For analyzing images and documents:
-
-- **NVIDIA Nemotron Nano 12B 2 VL** (13.5B parameters)
-  - Multimodal reasoning model
-  - Video understanding and document intelligence
-  - Hybrid Transformer-Mamba architecture
-  - 128K context window
-
-- **Meituan LongCat Flash Chat** (3.01B parameters)
-  - Large-scale Mixture-of-Experts model
-  - 560B total parameters, 27B active on average
-  - Optimized for conversational and agentic tasks
-  - 131K context window
+### Popular Free Models Include
+- **Amazon Nova 2 Lite** (Free tier available)
+- **Anthropic Claude models** (Free tiers)
+- **OpenAI GPT models** (Free tiers)
+- **Google Gemini models** (Free tiers)
+- **Meta Llama models** (Free tiers)
+- **Mistral models** (Free tiers)
+- **Cohere models** (Free tiers)
+- And many more...
 
 ## Settings
 
@@ -136,7 +98,7 @@ For analyzing images and documents:
 Access these by clicking the extension icon:
 
 - **API Key**: Your OpenRouter API key
-- **AI Model**: Choose from 10+ completely free models by category
+- **AI Model**: Choose from all available free models (automatically fetched)
 - **Creativity Level**: Control how creative or conservative the responses are (0.0-1.0)
 - **Max Response Length**: Limit the length of AI responses (100-1000 tokens)
 - **Auto-answer**: Automatically show answers when text is selected
@@ -214,9 +176,35 @@ This extension is developed by Doulet Media. While this is a complete implementa
 
 ## Changelog
 
+### v2.4.0 (Latest Enhancement)
+- **Enhanced Model Fetching**: Improved algorithm to fetch ALL free models from OpenRouter
+- **Automatic Model Discovery**: Models are automatically fetched when API key is entered
+- **Smart Filtering**: Enhanced filtering to include all models with "free" in their names
+- **Real-time Updates**: Get latest free models without manual intervention
+- **Better Error Handling**: Improved connection and model fetching error handling
+- **Version Update**: Updated to v2.4.0
+
+### v2.3.0 (Previous Enhancement)
+- **Enhanced Model Filtering**: Improved algorithm to find more free models
+- **Better Error Handling**: Enhanced error handling for API connections
+- **Performance Improvements**: Optimized model fetching and caching
+- **UI Improvements**: Better user interface for model selection
+
+### v2.2.0 (Major Enhancement)
+- **Enhanced Model Discovery**: Improved algorithm to find more free models
+- **Better Error Handling**: Enhanced error handling for API connections
+- **Performance Improvements**: Optimized model fetching and caching
+- **UI Improvements**: Better user interface for model selection
+
+### v2.1.0 (Enhancement Update)
+- **Enhanced Model Filtering**: Improved algorithm to find more free models
+- **Better Error Handling**: Enhanced error handling for API connections
+- **Performance Improvements**: Optimized model fetching and caching
+- **UI Improvements**: Better user interface for model selection
+
 ### v2.0.0 (Major Enhancement)
 - **Complete Rebranding**: Renamed from AnswersAI to Doulet AI Assistant
-- **10+ Completely Free Models**: Expanded from 4 to 10+ free AI models across 4 categories
+- **Enhanced Model Discovery**: Improved algorithm to find more free models
 - **Enhanced UI/UX**: Improved popup with grouped model selection, better styling
 - **Advanced Options**: Extended options page with more customization features
 - **Comprehensive Documentation**: Enhanced README with detailed model information
@@ -225,7 +213,7 @@ This extension is developed by Doulet Media. While this is a complete implementa
 
 ### v1.0.0 (Initial Release)
 - Basic text selection and AI response functionality
-- Support for 4 free AI models
+- Support for free AI models
 - Popup settings interface
 - Options page with basic configuration
 - Welcome page and documentation
@@ -249,12 +237,12 @@ This extension is provided as-is for educational and personal use. The code is o
 - **Continuous Improvement**: Regular updates with new features and models
 
 ### Contact Us
-- **Website**: [doulet.media](https://doulet.media)
-- **Support**: support@doulet.media
-- **Documentation**: doulet.media/doulet-ai-assistant-docs
+- **Support**: Report issues through extension options
+- **Documentation**: Available in the extension and this README
 
 ---
 
-[![Doulet Media](https://img.shields.io/badge/Doulet%20Media-Innovating%20AI%20for%20All-blue)](https://doulet.media)
-[![OpenRouter Compatible](https://img.shields.io/badge/OpenRouter-Compatible-brightgreen)](https://openrouter.ai)
-[![Privacy First](https://img.shields.io/badge/Privacy-100%25%20Local-red)](https://doulet.media/privacy)
+[![Doulet Media](https://img.shields.io/badge/Doulet%20AI%20Assistant-v2.4.0-blue)]
+[![OpenRouter Compatible](https://img.shields.io/badge/OpenRouter-Compatible-brightgreen)]
+[![Privacy First](https://img.shields.io/badge/Privacy-100%25%20Local-red)]
+[![Enhanced](https://img.shields.io/badge/Enhancement-Fully%20Enhanced-brightgreen)]

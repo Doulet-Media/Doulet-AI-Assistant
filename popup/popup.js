@@ -27,19 +27,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Always set the API key in the input field if available
         if (apiKey) {
             apiKeyInput.value = apiKey;
-        }
-        
-        // If API key is auto-loaded, hide the API key field and show a message
-        if (apiKey) {
-            // Hide API key input section
-            const apiKeySection = apiKeyInput.closest('.form-group');
-            if (apiKeySection) {
-                apiKeySection.style.display = 'none';
-            }
-            
-            // Show auto-loaded message
-            showStatus('API key auto-loaded from file ✓', 'connected');
-            
             // Check connection status
             checkConnectionStatus(apiKey);
         } else {
@@ -72,6 +59,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
+
+    // Refresh models when popup opens
+    refreshModelsList();
 
     // Update max tokens value display
     maxTokensSlider.addEventListener('input', function() {
@@ -126,6 +116,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     showStatus('Connected to OpenRouter ✓', 'connected');
                 }
+                // Fetch free models after successful connection
+                fetchAndPopulateModels(apiKey);
             } else {
                 // Don't change the status if network test fails - format is still valid
                 if (!result || !result.success) {
@@ -204,9 +196,29 @@ document.addEventListener('DOMContentLoaded', function() {
         statusIndicator.className = 'status-indicator ' + status;
     }
 
-    // Removed loadApiKeyFromFile function - API key must be entered manually in settings
+    // Fetch and populate models from background script
+    async function fetchAndPopulateModels(apiKey) {
+        try {
+            showStatus('Fetching available models...', 'connected');
+            
+            const result = await chrome.runtime.sendMessage({
+                action: 'fetchFreeModels'
+            });
+            
+            if (result.success && result.models && result.models.length > 0) {
+                populateModelSelect(result.models, modelSelect.value);
+                chrome.storage.sync.set({ freeModels: result.models });
+                showStatus(`Found ${result.models.length} free models ✓`, 'connected');
+            } else {
+                showStatus('Failed to fetch models', 'disconnected');
+            }
+        } catch (error) {
+            console.error('Failed to fetch models:', error);
+            showStatus('Failed to fetch models', 'disconnected');
+        }
+    }
 
-    // Fetch free models from OpenRouter
+    // Fetch free models from OpenRouter (kept for backward compatibility)
     async function fetchFreeModels() {
         try {
             // Load API key from storage
@@ -233,42 +245,28 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
             
             if (data && data.data) {
-                // Enhanced filtering for free models using keyword search
+                // Filter for completely free models using pricing object (most reliable method)
                 const freeModels = data.data
                     .filter(model => {
-                        // Primary filter: Check for "free" keyword in various fields
-                        const name = (model.name || '').toLowerCase();
-                        const id = (model.id || '').toLowerCase();
-                        const description = (model.description || '').toLowerCase();
-                        
-                        // Look for free-related keywords
-                        const freeKeywords = [
-                            'free', 'gratis', 'no cost', 'zero cost', 'complimentary'
-                        ];
-                        
-                        const hasFreeKeyword = freeKeywords.some(keyword =>
-                            name.includes(keyword) ||
-                            id.includes(keyword) ||
-                            description.includes(keyword)
-                        );
-                        
-                        // Secondary filter: Check pricing
+                        // Primary filter: Check pricing (most reliable method)
+                        // Free models have prompt = "0" and completion = "0"
                         const isFreeByPricing = model.pricing &&
-                                               (model.pricing.prompt === "0" || model.pricing.prompt === "0.0") &&
-                                               (model.pricing.completion === "0" || model.pricing.completion === "0.0");
+                                               model.pricing.prompt === "0" &&
+                                               model.pricing.completion === "0";
                         
-                        // Tertiary filter: Check for :free suffix in ID
+                        // Secondary filter: Check for :free suffix in ID (common naming convention)
+                        const id = (model.id || '').toLowerCase();
                         const hasFreeSuffix = id.includes(':free');
                         
-                        // Quaternary filter: Check model capabilities/tags
-                        const capabilities = (model.capabilities || []);
-                        const hasFreeCapability = capabilities.includes('free') ||
-                                                 capabilities.includes('no-cost');
+                        // Tertiary filter: Check for "free" keyword in ID or name
+                        const name = (model.name || '').toLowerCase();
+                        const hasFreeKeyword = name.includes('free') || id.includes('free');
                         
-                        return hasFreeKeyword || isFreeByPricing || hasFreeSuffix || hasFreeCapability;
+                        // Combine filters - prioritize pricing check, but include models with :free suffix
+                        return isFreeByPricing || hasFreeSuffix || hasFreeKeyword;
                     })
                     .map(model => model.id)
-                    .filter(id => id && id.length > 0 && id.includes(':free')) // Ensure valid free model IDs
+                    .filter(id => id && id.length > 0) // Ensure valid model IDs
                     .sort(); // Sort alphabetically
                 
                 return freeModels.length > 0 ? freeModels : ['amazon/nova-2-lite-v1:free'];
@@ -322,5 +320,22 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             modelSelect.appendChild(option);
         });
+    }
+
+    // Refresh models list when popup opens
+    async function refreshModelsList() {
+        try {
+            const result = await chrome.runtime.sendMessage({
+                action: 'fetchFreeModels'
+            });
+            
+            if (result.success && result.models && result.models.length > 0) {
+                populateModelSelect(result.models, modelSelect.value);
+                chrome.storage.sync.set({ freeModels: result.models });
+                console.log('Models refreshed in popup:', result.models.length);
+            }
+        } catch (error) {
+            console.error('Failed to refresh models in popup:', error);
+        }
     }
 });

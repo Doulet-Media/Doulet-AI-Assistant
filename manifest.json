@@ -1,10 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Doulet AI Assistant",
-  "version": "2.2.1",
-  "description": "Get AI-powered answers when you highlight text on any webpage. Works universally across all sites including Google Docs.",
+  "version": "2.4.0",
+  "description": "Get instant AI-powered answers when you highlight text on any webpage. This universal extension works seamlessly across all websites including Google Docs, Gmail, social media, and restricted sites. Features a minimal, non-intrusive design with smart positioning that doesn't block content. Use the non-conflicting Ctrl+Shift+Q hotkey or click the small floating button. Automatically discovers free AI models using your OpenRouter API key with intelligent keyword-based filtering. Supports multiple answer styles (concise, detailed, technical, casual) and languages. Privacy-focused with local storage and secure HTTPS communication. No data collection or tracking. Works offline with cached models and provides real-time connection status. Enhanced for Microsoft Edge with full Store compliance.",
   "author": "Doulet Media",
-  "default_locale": "en",
   "action": {
     "default_popup": "popup/popup.html",
     "default_title": "Doulet AI Assistant - Get AI Answers"
@@ -16,27 +15,49 @@
       "js": ["content/content.js"],
       "css": ["content/content.css"],
       "run_at": "document_end",
-      "all_frames": false
+      "all_frames": false,
+      "match_about_blank": true,
+      "include_globs": [
+        "https://docs.google.com/*",
+        "https://drive.google.com/*",
+        "https://mail.google.com/*",
+        "https://sheets.google.com/*",
+        "https://slides.google.com/*"
+      ],
+      "exclude_globs": [
+        "https://docs.google.com/document/d/*/edit?embedded=true*",
+        "https://docs.google.com/spreadsheets/d/*/edit?embedded=true*",
+        "https://docs.google.com/presentation/d/*/edit?embedded=true*"
+      ]
     }
   ],
   "background": {
     "service_worker": "background/background.js",
-    "type": "module"
+    "type": "module",
+    "persistent": false
   },
   "permissions": [
     "storage",
     "activeTab",
     "scripting",
     "contextMenus",
-    "tabs"
+    "tabs",
+    "declarativeContent",
+    "webNavigation",
+    "webRequest"
   ],
   "host_permissions": [
     "https://*.openrouter.ai/*",
     "https://docs.google.com/*",
-    "https://drive.google.com/*"
+    "https://drive.google.com/*",
+    "https://mail.google.com/*",
+    "https://sheets.google.com/*",
+    "https://slides.google.com/*",
+    "https://*.google.com/*"
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
+    "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-same-origin"
   },
   "commands": {
     "_execute_action": {
@@ -47,5 +68,28 @@
       "description": "Open Doulet AI Assistant"
     }
   },
-  "privacy_policy": "PRIVACY_POLICY.md"
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "popup/popup.html",
+        "popup/popup.css",
+        "popup/popup.js",
+        "options/options.html",
+        "options/options.css",
+        "options/options.js",
+        "welcome/welcome.html",
+        "welcome/welcome.css",
+        "welcome/welcome.js",
+        "content/content.css",
+        "content/content.js",
+        "background/background.js",
+        "icons/*.svg",
+        "icons/*.png"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "declarative_net_request": {
+    "rule_resources": ["rules/*.json"]
+  }
 }

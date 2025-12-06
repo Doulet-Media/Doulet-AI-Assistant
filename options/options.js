@@ -26,6 +26,12 @@ document.addEventListener('DOMContentLoaded', function() {
         showButtonCheckbox.checked = result.showButton !== false; // Default to true
         enableSoundsCheckbox.checked = result.enableSounds || false;
         
+        // Selection enhancement setting
+        const enableSelectionEnhancementCheckbox = document.getElementById('enableSelectionEnhancement');
+        if (enableSelectionEnhancementCheckbox) {
+            enableSelectionEnhancementCheckbox.checked = result.enableSelectionEnhancement || false;
+        }
+        
         // Answer settings
         answerStyleSelect.value = result.answerStyle || 'concise';
         languageSelect.value = result.language || 'auto';
@@ -54,6 +60,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
+        
+        // Refresh models when options page loads
+        refreshModelsList();
     });
 
     // Save settings
@@ -62,6 +71,7 @@ document.addEventListener('DOMContentLoaded', function() {
             autoAnswer: autoAnswerCheckbox.checked,
             showButton: showButtonCheckbox.checked,
             enableSounds: enableSoundsCheckbox.checked,
+            enableSelectionEnhancement: enableSelectionEnhancementCheckbox ? enableSelectionEnhancementCheckbox.checked : false,
             answerStyle: answerStyleSelect.value,
             language: languageSelect.value,
             maxAnswers: parseInt(maxAnswersInput.value) || 10,
@@ -137,6 +147,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }, function(response) {
                 if (response && response.success) {
                     showStatus('Connection successful! Your API key is working.', 'success');
+                    // Fetch free models after successful connection
+                    fetchAndPopulateModels(result.apiKey);
                 } else {
                     showStatus('Connection failed. Please check your API key.', 'error');
                 }
@@ -168,6 +180,23 @@ document.addEventListener('click', function(e) {
     }
 });
 
+// Fetch and populate models from background script
+async function fetchAndPopulateModels(apiKey) {
+    try {
+        const result = await chrome.runtime.sendMessage({
+            action: 'fetchFreeModels'
+        });
+        
+        if (result.success && result.models && result.models.length > 0) {
+            populateModelSelect(result.models);
+            chrome.storage.sync.set({ freeModels: result.models });
+            console.log(`Found ${result.models.length} free models`);
+        }
+    } catch (error) {
+        console.error('Failed to fetch models:', error);
+    }
+}
+
 // Load API key from apikey.txt file
 async function loadApiKeyFromFile() {
     try {
@@ -182,7 +211,7 @@ async function loadApiKeyFromFile() {
     return '';
 }
 
-// Fetch free models from OpenRouter
+// Fetch free models from OpenRouter (kept for backward compatibility)
 async function fetchFreeModels() {
     try {
         // Load API key from storage
@@ -194,7 +223,7 @@ async function fetchFreeModels() {
             return ['amazon/nova-2-lite-v1:free'];
         }
         
-        const response = await fetch('https://openrouter.ai/api/v1/models/user', {
+        const response = await fetch('https://openrouter.ai/api/v1/models', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -209,21 +238,31 @@ async function fetchFreeModels() {
         const data = await response.json();
         
         if (data && data.data) {
-            // Filter for completely free models (pricing.prompt = "0")
+            // Filter for completely free models using pricing object (most reliable method)
             const freeModels = data.data
                 .filter(model => {
-                    return model.pricing &&
-                           model.pricing.prompt === "0" &&
-                           model.pricing.completion === "0";
+                    // Primary filter: Check pricing (most reliable method)
+                    // Free models have prompt = "0" and completion = "0"
+                    const isFreeByPricing = model.pricing &&
+                                           model.pricing.prompt === "0" &&
+                                           model.pricing.completion === "0";
+                    
+                    // Secondary filter: Check for :free suffix in ID (common naming convention)
+                    const id = (model.id || '').toLowerCase();
+                    const hasFreeSuffix = id.includes(':free');
+                    
+                    // Tertiary filter: Check for "free" keyword in ID or name
+                    const name = (model.name || '').toLowerCase();
+                    const hasFreeKeyword = name.includes('free') || id.includes('free');
+                    
+                    // Combine filters - prioritize pricing check, but include models with :free suffix
+                    return isFreeByPricing || hasFreeSuffix || hasFreeKeyword;
                 })
-                .map(model => model.id);
+                .map(model => model.id)
+                .filter(id => id && id.length > 0) // Ensure valid model IDs
+                .sort(); // Sort alphabetically
             
-            // Add the specific model you want to use
-            if (!freeModels.includes('amazon/nova-2-lite-v1:free')) {
-                freeModels.unshift('amazon/nova-2-lite-v1:free');
-            }
-            
-            return freeModels;
+            return freeModels.length > 0 ? freeModels : ['amazon/nova-2-lite-v1:free'];
         }
         
         return ['amazon/nova-2-lite-v1:free'];
@@ -233,9 +272,65 @@ async function fetchFreeModels() {
     }
 }
 
-// Populate model select with free models
+// Populate model select with free models (enhanced version)
 function populateModelSelect(models) {
-    // This would need to be added to the HTML first
-    // For now, we'll just log the available models
+    // Get the model select element from the popup or create a display
+    const modelSelect = document.getElementById('model');
+    if (modelSelect) {
+        modelSelect.innerHTML = '';
+        models.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model;
+            option.textContent = getModelDisplayName(model);
+            modelSelect.appendChild(option);
+        });
+    }
+    
+    // Also log the available models for debugging
     console.log('Available free models:', models);
+}
+
+// Get display name for model
+function getModelDisplayName(modelId) {
+    const modelNames = {
+        'amazon/nova-2-lite-v1:free': 'Amazon Nova 2 Lite (Free)',
+        'amazon/nova-2': 'Amazon Nova 2',
+        'anthropic/claude-3.5-sonnet': 'Claude 3.5 Sonnet',
+        'anthropic/claude-3-haiku': 'Claude 3 Haiku',
+        'anthropic/claude-3-sonnet': 'Claude 3 Sonnet',
+        'anthropic/claude-3-opus': 'Claude 3 Opus',
+        'openai/gpt-3.5-turbo': 'GPT-3.5 Turbo',
+        'openai/gpt-4': 'GPT-4',
+        'openai/gpt-4-turbo': 'GPT-4 Turbo',
+        'google/gemini-pro': 'Gemini Pro',
+        'google/gemini-flash': 'Gemini Flash',
+        'google/gemini-ultra': 'Gemini Ultra',
+        'meta-llama/llama-3-8b': 'Llama 3 8B',
+        'meta-llama/llama-3-70b': 'Llama 3 70B',
+        'meta-llama/llama-3.1-8b': 'Llama 3.1 8B',
+        'meta-llama/llama-3.1-70b': 'Llama 3.1 70B',
+        'mistralai/mistral-small': 'Mistral Small',
+        'mistralai/mistral-large': 'Mistral Large',
+        'cohere/command-r': 'Command R',
+        'cohere/command-r-plus': 'Command R+'
+    };
+    
+    return modelNames[modelId] || modelId;
+}
+
+// Refresh models list when options page loads
+async function refreshModelsList() {
+    try {
+        const result = await chrome.runtime.sendMessage({
+            action: 'fetchFreeModels'
+        });
+        
+        if (result.success && result.models && result.models.length > 0) {
+            populateModelSelect(result.models);
+            chrome.storage.sync.set({ freeModels: result.models });
+            console.log('Models refreshed in options:', result.models.length);
+        }
+    } catch (error) {
+        console.error('Failed to refresh models in options:', error);
+    }
 }

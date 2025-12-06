@@ -14,6 +14,15 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
             sendResponse({ apiKey: result.apiKey || '' });
         });
         return true; // Keep message channel open for async response
+    } else if (request.action === 'fetchFreeModels') {
+        // Fetch and return free models list
+        updateFreeModelsList().then(models => {
+            sendResponse({ success: true, models: models });
+        }).catch(error => {
+            console.error('Failed to fetch free models:', error);
+            sendResponse({ success: false, error: error.message });
+        });
+        return true; // Keep message channel open for async response
     }
 });
 
@@ -146,7 +155,7 @@ async function testConnection(apiKey, sendResponse) {
 chrome.runtime.onInstalled.addListener(async function(details) {
     if (details.reason === 'install') {
         // Get free models and set default
-        const freeModels = await getFreeModels();
+        const freeModels = await updateFreeModelsList();
         const defaultModel = freeModels.length > 0 ? freeModels[0] : 'amazon/nova-2-lite-v1:free';
         
         // Show welcome message - NO API KEY LOADED FROM FILE
@@ -216,42 +225,28 @@ async function getFreeModels() {
         const data = await response.json();
         
         if (data && data.data) {
-            // Enhanced filtering for free models using keyword search
+            // Filter for completely free models using pricing object (most reliable method)
             const freeModels = data.data
                 .filter(model => {
-                    // Primary filter: Check for "free" keyword in various fields
-                    const name = (model.name || '').toLowerCase();
-                    const id = (model.id || '').toLowerCase();
-                    const description = (model.description || '').toLowerCase();
-                    
-                    // Look for free-related keywords
-                    const freeKeywords = [
-                        'free', 'gratis', 'no cost', 'zero cost', 'complimentary'
-                    ];
-                    
-                    const hasFreeKeyword = freeKeywords.some(keyword =>
-                        name.includes(keyword) ||
-                        id.includes(keyword) ||
-                        description.includes(keyword)
-                    );
-                    
-                    // Secondary filter: Check pricing
+                    // Primary filter: Check pricing (most reliable method)
+                    // Free models have prompt = "0" and completion = "0"
                     const isFreeByPricing = model.pricing &&
-                                           (model.pricing.prompt === "0" || model.pricing.prompt === "0.0") &&
-                                           (model.pricing.completion === "0" || model.pricing.completion === "0.0");
+                                           model.pricing.prompt === "0" &&
+                                           model.pricing.completion === "0";
                     
-                    // Tertiary filter: Check for :free suffix in ID
+                    // Secondary filter: Check for :free suffix in ID (common naming convention)
+                    const id = (model.id || '').toLowerCase();
                     const hasFreeSuffix = id.includes(':free');
                     
-                    // Quaternary filter: Check model capabilities/tags
-                    const capabilities = (model.capabilities || []);
-                    const hasFreeCapability = capabilities.includes('free') ||
-                                             capabilities.includes('no-cost');
+                    // Tertiary filter: Check for "free" keyword in ID or name
+                    const name = (model.name || '').toLowerCase();
+                    const hasFreeKeyword = name.includes('free') || id.includes('free');
                     
-                    return hasFreeKeyword || isFreeByPricing || hasFreeSuffix || hasFreeCapability;
+                    // Combine filters - prioritize pricing check, but include models with :free suffix
+                    return isFreeByPricing || hasFreeSuffix || hasFreeKeyword;
                 })
                 .map(model => model.id)
-                .filter(id => id && id.length > 0 && id.includes(':free')) // Ensure valid free model IDs
+                .filter(id => id && id.length > 0) // Ensure valid model IDs
                 .sort(); // Sort alphabetically
             
             return freeModels.length > 0 ? freeModels : ['amazon/nova-2-lite-v1:free'];
@@ -264,6 +259,27 @@ async function getFreeModels() {
         return ['amazon/nova-2-lite-v1:free'];
     }
 }
+
+// Fetch and update free models list when API key is available
+async function updateFreeModelsList() {
+    try {
+        const freeModels = await getFreeModels();
+        await chrome.storage.sync.set({ freeModels: freeModels });
+        console.log('Updated free models list:', freeModels);
+        return freeModels;
+    } catch (error) {
+        console.error('Failed to update free models list:', error);
+        return ['amazon/nova-2-lite-v1:free'];
+    }
+}
+
+// Listen for storage changes to automatically update models when API key is saved
+chrome.storage.onChanged.addListener(async function(changes, namespace) {
+    if (namespace === 'sync' && changes.apiKey) {
+        console.log('API key changed, updating free models...');
+        await updateFreeModelsList();
+    }
+});
 
 // Create context menu item
 function createContextMenu() {
