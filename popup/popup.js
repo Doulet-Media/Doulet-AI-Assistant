@@ -91,6 +91,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Open options page
+    const optionsBtn = document.getElementById('optionsBtn');
+    if (optionsBtn) {
+        optionsBtn.addEventListener('click', function() {
+            chrome.runtime.openOptionsPage();
+        });
+    }
+
     // Test connection
     testBtn.addEventListener('click', function() {
         const apiKey = apiKeyInput.value.trim();
