@@ -87,8 +87,5 @@
       ],
       "matches": ["<all_urls>"]
     }
-  ],
-  "declarative_net_request": {
-    "rule_resources": ["rules/*.json"]
-  }
+  ]
 }
