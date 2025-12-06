@@ -43,55 +43,77 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
 // Create the answer button
 function createAnswerButton() {
-    const existingButton = document.getElementById('answersai-button');
+    const existingButton = document.getElementById('doulet-ai-button');
     if (existingButton) {
         existingButton.remove();
     }
 
     const button = document.createElement('button');
-    button.id = 'answersai-button';
+    button.id = 'doulet-ai-button';
     button.innerHTML = '🤖';
     button.title = 'Get AI Answer (Ctrl+Shift+Q)';
     button.style.cssText = `
         position: fixed;
-        top: 8px;
-        right: 8px;
-        z-index: 10000;
+        z-index: 1000000;
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        border: none;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        border: none;
-        padding: 6px 8px;
-        border-radius: 50%;
-        font-size: 14px;
-        line-height: 1;
+        font-size: 20px;
+        font-weight: bold;
         cursor: pointer;
-        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
-        transition: all 0.2s ease;
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         display: none;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        opacity: 0.95;
+        opacity: 0;
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: manipulation;
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(255, 255, 255, 0.2);
     `;
     
     button.addEventListener('mouseenter', function() {
-        button.style.transform = 'translateY(-1px) scale(1.1)';
-        button.style.boxShadow = '0 3px 12px rgba(102, 126, 234, 0.35)';
-        button.style.opacity = '1';
+        this.style.transform = 'translateY(-3px) scale(1.1)';
+        this.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.5)';
+        this.style.zIndex = '1000001';
     });
     
     button.addEventListener('mouseleave', function() {
-        button.style.transform = 'translateY(0) scale(1)';
-        button.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.25)';
-        button.style.opacity = '0.95';
+        this.style.transform = 'translateY(0) scale(1)';
+        this.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
     });
     
-    button.addEventListener('click', function() {
+    button.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Check extension context
+        if (!chrome || !chrome.runtime) {
+            console.warn('Extension context invalidated, cannot get AI answer');
+            return;
+        }
+        
         if (currentSelection) {
             getAIAnswer(currentSelection);
+        } else {
+            // Show pulse animation to indicate no selection
+            this.style.animation = 'pulse 1s ease-in-out 3';
+            setTimeout(() => {
+                this.style.animation = '';
+            }, 3000);
         }
+    });
+    
+    // Enhanced click detection for restricted sites
+    button.addEventListener('mousedown', function(e) {
+        e.stopPropagation();
+    });
+    
+    button.addEventListener('mouseup', function(e) {
+        e.stopPropagation();
     });
 
     document.body.appendChild(button);
@@ -100,13 +122,13 @@ function createAnswerButton() {
 
 // Create the answer modal
 function createAnswerModal() {
-    const existingModal = document.getElementById('answersai-modal');
+    const existingModal = document.getElementById('doulet-ai-modal');
     if (existingModal) {
         existingModal.remove();
     }
 
     const modal = document.createElement('div');
-    modal.id = 'answersai-modal';
+    modal.id = 'doulet-ai-modal';
     modal.innerHTML = `
         <div class="modal-overlay">
             <div class="modal-content">
@@ -339,7 +361,7 @@ function copyAnswer() {
     });
 }
 
-// Handle text selection with extension context validation
+// Handle text selection with enhanced universal compatibility
 document.addEventListener('mouseup', function(e) {
     // Check if extension context is still valid before processing
     if (!chrome || !chrome.runtime) {
@@ -347,10 +369,11 @@ document.addEventListener('mouseup', function(e) {
         return;
     }
     
+    // Enhanced selection detection for all websites
     const selection = window.getSelection();
     const selectedText = selection.toString().trim();
     
-    // Enhanced selection validation
+    // Enhanced selection validation for universal compatibility
     if (selectedText.length > 0) {
         // Validate selection quality
         if (selectedText.length < 3 && !/[a-zA-Z]/.test(selectedText)) {
@@ -360,33 +383,66 @@ document.addEventListener('mouseup', function(e) {
         
         currentSelection = selectedText;
         
-        // Enhance selection visibility if enabled
+        // Enhanced selection visibility if enabled
         if (settings.enableSelectionEnhancement && !isSelectionEnhanced) {
             enhanceSelectionVisibility();
         }
         
-        const button = document.getElementById('answersai-button') || createAnswerButton();
+        // Create or get the answer button
+        let button = document.getElementById('doulet-ai-button');
+        if (!button) {
+            button = createAnswerButton();
+        }
+        
         if (button) {
             button.style.display = 'block';
             
-            // Position button near selection but not blocking content
-            const range = selection.getRangeAt(0);
-            const rect = range.getBoundingClientRect();
-            
-            // Calculate position ensuring button stays on screen
-            let top = rect.top + window.scrollY - 50;
-            let left = rect.right + window.scrollX + 10;
-            
-            // Keep button within viewport
-            if (left + 50 > window.scrollX + window.innerWidth) {
-                left = rect.left + window.scrollX - 50;
+            // Enhanced positioning for universal website compatibility
+            try {
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                
+                // Calculate position ensuring button stays on screen
+                let top = rect.top + window.scrollY - 50;
+                let left = rect.right + window.scrollX + 10;
+                
+                // Keep button within viewport with better calculations
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+                const scrollX = window.scrollX;
+                const scrollY = window.scrollY;
+                
+                // Adjust position if near edges
+                if (left + 60 > scrollX + viewportWidth) {
+                    left = rect.left + scrollX - 60;
+                }
+                
+                if (top < scrollY) {
+                    top = scrollY + 10;
+                }
+                
+                if (top + 40 > scrollY + viewportHeight - 10) {
+                    top = rect.bottom + scrollY + 10;
+                }
+                
+                // Ensure button doesn't go off-screen left
+                if (left < scrollX + 10) {
+                    left = scrollX + 10;
+                }
+                
+                button.style.top = top + 'px';
+                button.style.left = left + 'px';
+                button.style.opacity = '1';
+                
+                // Add smooth animation
+                button.style.transition = 'all 0.3s ease';
+                
+            } catch (error) {
+                console.warn('Failed to position button:', error);
+                // Fallback positioning
+                button.style.top = (window.scrollY + 10) + 'px';
+                button.style.left = (window.scrollX + 10) + 'px';
             }
-            if (top < window.scrollY) {
-                top = window.scrollY + 10;
-            }
-            
-            button.style.top = top + 'px';
-            button.style.left = left + 'px';
         }
         
         // Auto-answer if enabled
@@ -396,9 +452,10 @@ document.addEventListener('mouseup', function(e) {
             }, 500);
         }
     } else {
-        const button = document.getElementById('answersai-button');
+        const button = document.getElementById('doulet-ai-button');
         if (button) {
             button.style.display = 'none';
+            button.style.opacity = '0';
         }
         
         // Reset selection enhancement when no text selected
@@ -406,7 +463,7 @@ document.addEventListener('mouseup', function(e) {
             resetSelectionVisibility();
         }
     }
-});
+}, { passive: true });
 
 // Enhance selection visibility
 function enhanceSelectionVisibility() {

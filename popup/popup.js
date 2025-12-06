@@ -70,6 +70,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Save settings
     saveBtn.addEventListener('click', function() {
+        // Check extension context before processing
+        if (!chrome || !chrome.runtime || !chrome.storage || !chrome.storage.sync) {
+            console.warn('Extension context invalidated, cannot save settings');
+            showStatus('Extension context invalidated', 'disconnected');
+            return;
+        }
+        
         const settings = {
             apiKey: apiKeyInput.value.trim(),
             model: modelSelect.value,
@@ -82,8 +89,16 @@ document.addEventListener('DOMContentLoaded', function() {
             chrome.storage.sync.set(settings, function() {
                 showStatus('Settings saved!', 'connected');
                 
-                // Check connection status
-                checkConnectionStatus(settings.apiKey);
+                // Check connection status and fetch models
+                if (settings.apiKey) {
+                    checkConnectionStatus(settings.apiKey);
+                    // Auto-fetch models after saving API key
+                    setTimeout(() => {
+                        fetchAndPopulateModels(settings.apiKey).then(() => {
+                            showStatus('Models updated! Check the model list above.', 'connected');
+                        });
+                    }, 500);
+                }
             });
         } catch (error) {
             console.error('Failed to save settings:', error);
