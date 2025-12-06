@@ -146,9 +146,10 @@ Access these via the options page:
 ## Privacy & Security
 
 - **No Data Collection**: We don't collect or store any of your data
-- **Local Storage**: Your API key is stored locally in your browser only
+- **Local Storage**: Your API keys are stored locally in your browser only
 - **Secure Communication**: All API calls use HTTPS encryption
 - **OpenRouter Privacy**: Your usage is covered by OpenRouter's privacy policy
+- **Hugging Face Privacy**: Your fallback usage is covered by Hugging Face's privacy policy
 
 ## Support
 
@@ -171,8 +172,40 @@ This extension is developed by Doulet Media. While this is a complete implementa
 - This extension uses OpenRouter's API services
 - You must comply with OpenRouter's terms of service
 - Some AI models may have specific usage guidelines (check model documentation)
+- Hugging Face fallback uses Mistral-7B-Instruct-v0.2 model
 - This extension is for educational and personal use only
 - **Never Published**: This extension will never be published on public extension stores
+
+## Hugging Face Setup
+
+### Getting Your Hugging Face API Key
+
+1. **Visit Hugging Face**: Go to [huggingface.co](https://huggingface.co)
+2. **Create Account**: Sign up for a free account
+3. **Get API Key**:
+   - Go to [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
+   - Click "New token"
+   - Copy the generated token
+4. **Enter in Extension**:
+   - Open extension options
+   - Paste your Hugging Face API key in the "Hugging Face API Key" field
+   - Save settings
+
+### How Fallback Works
+
+1. **Primary API**: Extension first tries OpenRouter
+2. **Rate Limit Detection**: Automatically detects 429 (rate limit) errors
+3. **Seamless Switch**: Automatically switches to Hugging Face
+4. **User Notification**: Shows "fallback: true" in the response
+5. **Back to Primary**: Returns to OpenRouter when limit resets
+
+### Hugging Face Model Information
+
+- **Model**: Mistral-7B-Instruct-v0.2
+- **Type**: Instruction-tuned LLM
+- **Size**: 7 billion parameters
+- **Quality**: High-quality text generation
+- **Cost**: Free tier available
 
 ## Changelog
 

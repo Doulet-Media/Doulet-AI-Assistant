@@ -487,7 +487,7 @@ observer.observe(document.body, {
     subtree: true
 });
 
-// Enhanced selection handler with better compatibility
+// Enhanced selection handler with Google Workspace support
 function enhancedSelectionHandler() {
     // Check if browser selection is blocked
     if (settings.blockBrowserSelection) {
@@ -516,6 +516,50 @@ function enhancedSelectionHandler() {
             }
             return selection;
         };
+    }
+    
+    // Google Workspace compatibility
+    if (window.location.hostname === 'docs.google.com' ||
+        window.location.hostname === 'sheets.google.com' ||
+        window.location.hostname === 'slides.google.com') {
+        
+        // Lightweight Google Workspace support - minimal overhead
+        const googleWorkspaceObserver = new MutationObserver((mutations) => {
+            // Only observe for critical elements, don't interfere with Google's functionality
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList') {
+                    // Check if new content was added that we need to handle
+                    const addedNodes = Array.from(mutation.addedNodes);
+                    addedNodes.forEach(node => {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            // Only add minimal event listeners for selection
+                            node.addEventListener('mouseup', () => {
+                                // Small delay to ensure Google's selection is complete
+                                setTimeout(handleTextSelection, 50);
+                            }, { passive: true });
+                        }
+                    });
+                }
+            });
+        });
+        
+        // Observe document body with minimal impact
+        googleWorkspaceObserver.observe(document.body, {
+            childList: true,
+            subtree: false // Only observe direct children to minimize performance impact
+        });
+        
+        // Add Google Workspace specific selection handler
+        document.addEventListener('mouseup', function(e) {
+            // Lightweight check for Google Workspace content
+            const target = e.target.closest('.kix-appview-editor, .waffle-table, .slides-editor');
+            if (target) {
+                // Small delay to ensure Google's selection is complete
+                setTimeout(handleTextSelection, 100);
+            }
+        }, { passive: true });
+        
+        console.log('Lightweight Google Workspace support enabled');
     }
 }
 

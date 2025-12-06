@@ -138,13 +138,14 @@ async function getAIAnswer(request, sendResponse) {
     }
 }
 
-// Enhanced unlimited answer handler
-async function getUnlimitedAnswer(request, sendResponse) {
+// Enhanced detailed answer handler with Hugging Face fallback
+async function getDetailedAnswer(request, sendResponse) {
     const { text, prompt, model, temperature, maxTokens } = request;
     
     try {
-        let result = await chrome.storage.sync.get(['apiKey']);
+        let result = await chrome.storage.sync.get(['apiKey', 'huggingFaceApiKey']);
         let apiKey = result.apiKey;
+        let huggingFaceApiKey = result.huggingFaceApiKey;
         
         if (!apiKey) {
             sendResponse({
@@ -155,7 +156,7 @@ async function getUnlimitedAnswer(request, sendResponse) {
         }
         
         const settingsResult = await chrome.storage.sync.get(['timeout']);
-        const timeout = (settingsResult.timeout || 120) * 1000; // 2 minutes for unlimited answers
+        const timeout = (settingsResult.timeout || 120) * 1000; // 2 minutes for detailed answers
         
         const controller = new AbortController();
         const timeoutId = setTimeout(() => {
@@ -169,19 +170,28 @@ async function getUnlimitedAnswer(request, sendResponse) {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${apiKey}`,
                     'HTTP-Referer': chrome.runtime.getURL(''),
-                    'X-Title': 'AI Question Answerer - Unlimited Mode',
-                    'Accept': 'application/json'
+                    'X-Title': 'AI Question Answerer - Detailed Mode',
+                    'Accept': 'application/json',
+                    'User-Agent': 'AI-Question-Answerer/3.0'
                 },
                 body: JSON.stringify({
                     model: model,
                     messages: [
+                        {
+                            role: 'system',
+                            content: `You are an expert AI assistant providing detailed, comprehensive answers for students.
+                            Your responses should be thorough, informative, and educational.
+                            Include examples, explanations, and relevant details.
+                            Structure your answers clearly with proper formatting when appropriate.
+                            Never provide one-sentence or overly simple answers.`
+                        },
                         {
                             role: 'user',
                             content: prompt
                         }
                     ],
                     temperature: temperature || 0.7,
-                    max_tokens: maxTokens || 2000,  // Unlimited tokens
+                    max_tokens: maxTokens || 3000,  // Increased for detailed answers
                     stream: false
                 }),
                 signal: controller.signal
@@ -191,6 +201,51 @@ async function getUnlimitedAnswer(request, sendResponse) {
             
             if (!response.ok) {
                 const errorText = await response.text();
+                
+                // Check if it's a rate limit error (429)
+                if (response.status === 429) {
+                    console.log('OpenRouter rate limit reached, trying Hugging Face...');
+                    
+                    // Try Hugging Face API as fallback
+                    if (huggingFaceApiKey) {
+                        try {
+                            const hfResponse = await getAnswerFromHuggingFace({
+                                text, prompt, temperature, maxTokens: maxTokens || 3000
+                            }, huggingFaceApiKey, controller.signal);
+                            
+                            if (hfResponse.success) {
+                                sendResponse({
+                                    success: true,
+                                    answer: hfResponse.answer,
+                                    model: 'huggingface',
+                                    tokens_used: hfResponse.tokens_used || 0,
+                                    enhanced: false,
+                                    fallback: true
+                                });
+                                return;
+                            } else {
+                                sendResponse({
+                                    success: false,
+                                    error: `Hugging Face fallback failed: ${hfResponse.error}. OpenRouter daily limit reached.`
+                                });
+                                return;
+                            }
+                        } catch (hfError) {
+                            sendResponse({
+                                success: false,
+                                error: `Hugging Face fallback failed: ${hfError.message}. OpenRouter daily limit reached.`
+                            });
+                            return;
+                        }
+                    } else {
+                        sendResponse({
+                            success: false,
+                            error: `OpenRouter daily limit reached (429). Please enter a Hugging Face API key in settings for fallback support.`
+                        });
+                        return;
+                    }
+                }
+                
                 throw new Error(`HTTP error! Status: ${response.status} - ${errorText}`);
             }
             
@@ -199,18 +254,77 @@ async function getUnlimitedAnswer(request, sendResponse) {
             if (data && data.choices && data.choices.length > 0) {
                 const answer = data.choices[0].message.content;
                 
-                // Enhanced response validation
+                // Enhanced response validation for detailed answers
                 if (!answer || answer.trim().length === 0) {
-                    // Try to get more detailed error information
-                    const errorInfo = data.error || 'Empty response from AI';
-                    throw new Error(`AI returned empty response: ${errorInfo}`);
+                    throw new Error('AI returned empty response. This may happen with very complex questions.');
+                }
+                
+                // Check if answer is too short (likely not detailed enough)
+                const wordCount = answer.trim().split(/\s+/).length;
+                if (wordCount < 50) {
+                    // Try to get a more detailed response by adjusting temperature
+                    const enhancedPrompt = `${prompt}\n\nIMPORTANT: Provide a MUCH more detailed and comprehensive response. Include multiple examples, thorough explanations, and extensive details. Minimum 200 words required.`;
+                    
+                    // Make another request with enhanced prompt
+                    const enhancedResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`,
+                            'HTTP-Referer': chrome.runtime.getURL(''),
+                            'X-Title': 'AI Question Answerer - Enhanced Mode',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: model,
+                            messages: [
+                                {
+                                    role: 'system',
+                                    content: `You are an expert AI assistant providing extremely detailed, comprehensive answers for students.
+                                    Your responses must be thorough, informative, and educational.
+                                    Include multiple examples, detailed explanations, and extensive relevant details.
+                                    Structure your answers clearly with proper formatting when appropriate.
+                                    NEVER provide one-sentence or overly simple answers. Always provide comprehensive responses.`
+                                },
+                                {
+                                    role: 'user',
+                                    content: enhancedPrompt
+                                }
+                            ],
+                            temperature: Math.min((temperature || 0.7) + 0.2, 1.0), // Slightly higher temperature for more detail
+                            max_tokens: maxTokens || 4000,  // Even more tokens for enhanced detail
+                            stream: false
+                        }),
+                        signal: controller.signal
+                    });
+                    
+                    if (enhancedResponse.ok) {
+                        const enhancedData = await enhancedResponse.json();
+                        if (enhancedData && enhancedData.choices && enhancedData.choices.length > 0) {
+                            const enhancedAnswer = enhancedData.choices[0].message.content;
+                            const enhancedWordCount = enhancedAnswer.trim().split(/\s+/).length;
+                            
+                            // Only use enhanced answer if it's significantly more detailed
+                            if (enhancedWordCount > wordCount * 1.5) {
+                                sendResponse({
+                                    success: true,
+                                    answer: enhancedAnswer,
+                                    model: model,
+                                    tokens_used: enhancedData.usage?.total_tokens || 0,
+                                    enhanced: true
+                                });
+                                return;
+                            }
+                        }
+                    }
                 }
                 
                 sendResponse({
                     success: true,
                     answer: answer,
                     model: model,
-                    tokens_used: data.usage?.total_tokens || 0
+                    tokens_used: data.usage?.total_tokens || 0,
+                    enhanced: false
                 });
             } else {
                 throw new Error('Invalid response from OpenRouter API - no choices returned');
@@ -228,13 +342,13 @@ async function getUnlimitedAnswer(request, sendResponse) {
                 console.error('Detailed error:', error);
                 sendResponse({
                     success: false,
-                    error: `Failed to get answer: ${error.message}. Check your API key and internet connection.`
+                    error: `Failed to get detailed answer: ${error.message}. Check your API key and internet connection.`
                 });
             }
         }
         
     } catch (error) {
-        console.error('Error getting AI answer:', error);
+        console.error('Error getting detailed AI answer:', error);
         sendResponse({
             success: false,
             error: `Extension error: ${error.message}. Please reload the extension and try again.`
@@ -242,32 +356,245 @@ async function getUnlimitedAnswer(request, sendResponse) {
     }
 }
 
-// Advanced prompt enhancement for better responses
-function enhancePromptForUnlimitedAnswer(text, settings) {
+// Hugging Face API handler for fallback
+async function getAnswerFromHuggingFace(request, huggingFaceApiKey, signal) {
+    try {
+        // Hugging Face Inference API endpoint
+        const response = await fetch('https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${huggingFaceApiKey}`,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                inputs: request.prompt,
+                parameters: {
+                    max_new_tokens: request.maxTokens || 3000,
+                    temperature: request.temperature || 0.7,
+                    do_sample: true,
+                    return_full_text: false
+                }
+            }),
+            signal: signal
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Hugging Face API error: ${response.status} - ${errorText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data && data.length > 0 && data[0].generated_text) {
+            return {
+                success: true,
+                answer: data[0].generated_text,
+                tokens_used: data[0].generated_text.length / 4 // Rough estimate
+            };
+        } else {
+            throw new Error('Hugging Face returned empty response');
+        }
+        
+    } catch (error) {
+        console.error('Hugging Face API error:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
+// Perplexity AI API handler for free online fallback
+async function getAnswerFromPerplexity(request, signal) {
+    try {
+        // Perplexity AI free API endpoint
+        const response = await fetch('https://api.perplexity.ai/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                model: 'llama-3.1-sonar-small-32k-chat', // Free model
+                messages: [
+                    {
+                        role: 'user',
+                        content: request.prompt
+                    }
+                ],
+                temperature: request.temperature || 0.7,
+                max_tokens: request.maxTokens || 3000
+            }),
+            signal: signal
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Perplexity AI API error: ${response.status} - ${errorText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data && data.choices && data.choices.length > 0) {
+            return {
+                success: true,
+                answer: data.choices[0].message.content,
+                tokens_used: data.usage?.total_tokens || 0
+            };
+        } else {
+            throw new Error('Perplexity AI returned empty response');
+        }
+        
+    } catch (error) {
+        console.error('Perplexity AI API error:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
+// DeepSeek API handler for free online fallback
+async function getAnswerFromDeepSeek(request, signal) {
+    try {
+        // DeepSeek free API endpoint
+        const response = await fetch('https://api.deepseek.com/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                model: 'deepseek-chat', // Free model
+                messages: [
+                    {
+                        role: 'user',
+                        content: request.prompt
+                    }
+                ],
+                temperature: request.temperature || 0.7,
+                max_tokens: request.maxTokens || 3000
+            }),
+            signal: signal
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`DeepSeek API error: ${response.status} - ${errorText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data && data.choices && data.choices.length > 0) {
+            return {
+                success: true,
+                answer: data.choices[0].message.content,
+                tokens_used: data.usage?.total_tokens || 0
+            };
+        } else {
+            throw new Error('DeepSeek returned empty response');
+        }
+        
+    } catch (error) {
+        console.error('DeepSeek API error:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
+// Test Perplexity AI connection
+async function testPerplexityConnection(sendResponse) {
+    try {
+        const response = await fetch('https://api.perplexity.ai/models', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            sendResponse({
+                success: true,
+                message: 'Perplexity AI connection successful'
+            });
+        } else {
+            sendResponse({
+                success: false,
+                error: `Perplexity AI connection failed: ${response.status}`
+            });
+        }
+        
+    } catch (error) {
+        console.error('Perplexity AI connection test error:', error);
+        sendResponse({
+            success: false,
+            error: `Perplexity AI connection failed: ${error.message}`
+        });
+    }
+}
+
+// Test DeepSeek connection
+async function testDeepSeekConnection(sendResponse) {
+    try {
+        const response = await fetch('https://api.deepseek.com/v1/models', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            sendResponse({
+                success: true,
+                message: 'DeepSeek connection successful'
+            });
+        } else {
+            sendResponse({
+                success: false,
+                error: `DeepSeek connection failed: ${response.status}`
+            });
+        }
+        
+    } catch (error) {
+        console.error('DeepSeek connection test error:', error);
+        sendResponse({
+            success: false,
+            error: `DeepSeek connection failed: ${error.message}`
+        });
+    }
+}
+
+// Advanced prompt enhancement for detailed responses
+function enhancePromptForDetailedAnswer(text, settings) {
     let prompt = '';
     
     // Add custom prompt if provided
     if (settings.customPrompt && settings.customPrompt.trim()) {
         prompt += settings.customPrompt.trim() + '\n\n';
     } else {
-        // Enhanced prompt for comprehensive, unlimited answers
-        prompt = `You are an expert AI assistant providing comprehensive answers for students.
-        Answer the following question with the most detailed, accurate, and complete response possible.
+        // Enhanced prompt for detailed, comprehensive answers
+        prompt = `You are an expert AI assistant providing detailed, comprehensive answers for students.
+        Answer the following question with the most thorough, informative, and educational response possible.
         
         REQUIREMENTS:
-        - Provide the complete answer without token limitations
-        - Include all relevant information, examples, and details
-        - Do not provide introductions, conclusions, or explanations
-        - Do not summarize or omit any information
-        - Focus on delivering the full, comprehensive answer
-        - Use clear, structured formatting when appropriate
-        - Include examples, facts, and supporting details
-        - Ensure the answer is thorough and complete
+        - Provide EXTREMELY detailed and comprehensive explanations
+        - Include multiple relevant examples, case studies, and practical applications
+        - Explain concepts step-by-step with clear reasoning
+        - Include relevant facts, statistics, and supporting evidence
+        - Use proper formatting (bullet points, numbered lists, paragraphs) when appropriate
+        - Ensure the answer is educational and informative
+        - DO NOT provide one-sentence or overly simple answers
+        - DO NOT skip important details or explanations
+        - DO NOT provide introductions or conclusions - go straight to the answer
+        - Focus on delivering complete, detailed information
         
         QUESTION:
         "${text}"
         
-        ANSWER (comprehensive and unlimited):`;
+        DETAILED ANSWER (comprehensive, educational, and thorough):`;
     }
     
     // Add language preference if set
@@ -277,26 +604,29 @@ function enhancePromptForUnlimitedAnswer(text, settings) {
             'it': 'Italian', 'pt': 'Portuguese', 'ru': 'Russian', 'zh': 'Chinese',
             'ja': 'Japanese', 'ko': 'Korean'
         };
-        prompt += `\n\nIMPORTANT: Respond in ${languageMap[settings.language]} and ensure all examples and explanations are culturally appropriate.`;
+        prompt += `\n\nIMPORTANT: Respond in ${languageMap[settings.language]} and ensure all examples and explanations are culturally appropriate and accurately translated.`;
     }
     
     // Add style preference for better formatting
     if (settings.answerStyle) {
         switch(settings.answerStyle) {
             case 'detailed':
-                prompt += `\n\nFORMAT: Use detailed explanations, multiple examples, and thorough coverage of all aspects.`;
+                prompt += `\n\nFORMAT: Use extremely detailed explanations, multiple comprehensive examples, and thorough coverage of all aspects. Include step-by-step breakdowns and detailed analysis.`;
                 break;
             case 'technical':
-                prompt += `\n\nFORMAT: Use technical language, precise terminology, and include relevant formulas, data, and specifications.`;
+                prompt += `\n\nFORMAT: Use technical language, precise terminology, detailed specifications, relevant formulas, data tables, and comprehensive technical explanations.`;
                 break;
             case 'concise':
-                prompt += `\n\nFORMAT: Be comprehensive but avoid unnecessary verbosity. Focus on key points with brief examples.`;
+                prompt += `\n\nFORMAT: Be comprehensive but structured. Use clear sections, bullet points, and focused explanations. Include all essential details in an organized manner.`;
                 break;
             case 'casual':
-                prompt += `\n\nFORMAT: Use conversational tone while maintaining completeness and accuracy.`;
+                prompt += `\n\nFORMAT: Use conversational tone while maintaining detail and accuracy. Include relatable examples and clear explanations in an engaging style.`;
                 break;
         }
     }
+    
+    // Add Google Workspace compatibility note
+    prompt += `\n\nGOOGLE WORKSPACE NOTE: This response will be displayed in a web extension popup. Ensure formatting is web-friendly and displays correctly in browser environments.`;
     
     return prompt;
 }
