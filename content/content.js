@@ -946,12 +946,89 @@ async function getAIAnswer(text) {
             answerContainer.style.display = 'block';
             answer.style.display = 'block';
             
-            // Enhanced response validation
+            // Enhanced response validation for detailed answers
             const answerText = response.answer || '';
             if (!answerText || answerText.trim().length === 0) {
                 error.style.display = 'block';
-                error.textContent = 'Received empty response from AI. Please try again or select different text.';
+                error.innerHTML = `
+                    <strong>Empty Response Received</strong><br>
+                    The AI returned an empty response. This can happen with:
+                    <ul style="margin-top: 8px; margin-left: 20px;">
+                        <li>Non-question text (try rephrasing as a question)</li>
+                        <li>Text that's too short or vague</li>
+                        <li>Technical issues with the AI service</li>
+                    </ul>
+                    <div style="margin-top: 10px;">
+                        <strong>Suggestions:</strong>
+                        <ul style="margin-top: 8px; margin-left: 20px;">
+                            <li>Try selecting more text or rephrasing your selection</li>
+                            <li>Add a question mark or question word (what, why, how)</li>
+                            <li>Wait a moment and try again</li>
+                        </ul>
+                    </div>
+                `;
                 answerContainer.style.display = 'none';
+                return;
+            }
+            
+            // Check if answer is too short (likely not detailed enough)
+            const wordCount = answerText.trim().split(/\s+/).length;
+            if (wordCount < 100) {
+                // Try to get a more detailed response by adjusting the prompt
+                const enhancedPrompt = `${prompt}\n\nIMPORTANT: This response is too short. Please provide a MUCH more detailed and comprehensive response. Include multiple examples, thorough explanations, and extensive details. Minimum 500 words required.`;
+                
+                // Make another request with enhanced prompt
+                chrome.runtime.sendMessage({
+                    action: 'getAnswer',
+                    text: currentSelection,
+                    prompt: enhancedPrompt,
+                    model: settings.model || 'amazon/nova-2-lite-v1:free',
+                    temperature: Math.min((settings.temperature || 0.8) + 0.2, 1.0), // Slightly higher temperature for more detail
+                    maxTokens: settings.maxTokens || 5000  // Even more tokens for enhanced detail
+                }, function(enhancedResponse) {
+                    if (enhancedResponse && enhancedResponse.success) {
+                        const enhancedAnswerText = enhancedResponse.answer || '';
+                        const enhancedWordCount = enhancedAnswerText.trim().split(/\s+/).length;
+                        
+                        // Only use enhanced answer if it's significantly more detailed
+                        if (enhancedWordCount > wordCount * 2) {
+                            const cleanAnswer = enhancedAnswerText.replace(/^\s*[\r\n]+/gm, '\n').trim();
+                            answer.textContent = cleanAnswer;
+                            
+                            // Show enhancement notice
+                            const enhancementNotice = document.createElement('div');
+                            enhancementNotice.style.cssText = `
+                                background: #e7f3ff;
+                                border: 1px solid #b3d9ff;
+                                color: #0c5bab;
+                                padding: 8px 12px;
+                                border-radius: 8px;
+                                margin-bottom: 15px;
+                                font-size: 13px;
+                            `;
+                            enhancementNotice.textContent = 'Enhanced: Provided more detailed response';
+                            answerContainer.insertBefore(enhancementNotice, answer);
+                            
+                            // Remove notice after 3 seconds
+                            setTimeout(() => {
+                                if (enhancementNotice.parentNode) {
+                                    enhancementNotice.parentNode.removeChild(enhancementNotice);
+                                }
+                            }, 3000);
+                        } else {
+                            const cleanAnswer = answerText.replace(/^\s*[\r\n]+/gm, '\n').trim();
+                            answer.textContent = cleanAnswer;
+                        }
+                    } else {
+                        const cleanAnswer = answerText.replace(/^\s*[\r\n]+/gm, '\n').trim();
+                        answer.textContent = cleanAnswer;
+                    }
+                    
+                    // Play sound if enabled
+                    if (settings.enableSounds) {
+                        playNotificationSound();
+                    }
+                });
                 return;
             }
             
@@ -969,7 +1046,13 @@ async function getAIAnswer(text) {
             const errorMessage = response && response.error
                 ? response.error
                 : 'Failed to get answer. Please check your API key, internet connection, and try again.';
-            error.textContent = errorMessage;
+            error.innerHTML = `
+                <strong>Request Failed</strong><br>
+                ${errorMessage}
+                <div style="margin-top: 10px; font-size: 12px; color: #495057;">
+                    Tip: If this happens frequently, try switching to NVIDIA NIM API in settings for better reliability.
+                </div>
+            `;
         }
     });
 }

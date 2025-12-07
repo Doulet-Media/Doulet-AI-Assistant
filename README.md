@@ -2,17 +2,20 @@
 
 A powerful web extension that provides AI-powered answers when you highlight text on any webpage. Developed by Doulet Media using completely free OpenRouter AI models with NVIDIA NIM fallback support.
 
-![Doulet AI Assistant](https://img.shields.io/badge/Doulet%20AI%20Assistant-v3.0.0-blue)
+![Doulet AI Assistant](https://img.shields.io/badge/Doulet%20AI%20Assistant-v3.1.0-blue)
 ![Free Models](https://img.shields.io/badge/Models-All%20Free%20Models-green)
 ![Privacy](https://img.shields.io/badge/Privacy-100%25%20Local-red)
 ![OpenRouter](https://img.shields.io/badge/OpenRouter-Compatible-brightgreen)
-![Enhanced](https://img.shields.io/badge/Enhancement-Fully%20Enhanced-brightgreen)
+![Enhanced](https://img.shields.io/badge/Enhancement-Ultra%20Enhanced-brightgreen)
+![Detailed](https://img.shields.io/badge/Responses-Detailed%20&%20Comprehensive-orange)
 
 ## 🚀 Features
 
 ### ✨ Core Features
-- **Instant AI Answers**: Get intelligent responses to any highlighted text
+- **Ultra-Detailed AI Answers**: Get comprehensive, educational responses with examples and explanations
 - **10+ Completely Free Models**: Access cutting-edge AI models at zero cost
+- **Smart Response Enhancement**: Automatic retry for more detailed answers when needed
+- **Empty Response Prevention**: Intelligent handling of non-questions and edge cases
 - **Privacy First**: Your data stays private, no tracking or data collection
 - **Easy to Use**: Simple click or keyboard shortcut (Ctrl+Shift+A)
 - **Context Menu**: Right-click selected text for quick access
@@ -25,10 +28,12 @@ A powerful web extension that provides AI-powered answers when you highlight tex
 
 ### ⚙️ Advanced Customization
 - **Smart Model Selection**: Choose models based on your specific needs
-- **Custom Prompts**: Add personalized instructions for tailored responses
+- **Enhanced Custom Prompts**: Add personalized instructions for tailored, detailed responses
 - **Language Preferences**: Get responses in your preferred language
 - **Response Styles**: Concise, detailed, technical, or casual tones
 - **Performance Tuning**: Adjust temperature, response length, and timeouts
+- **Minimum Word Count**: Ensures comprehensive answers (100+ words minimum)
+- **Automatic Enhancement**: Smart retry system for better quality responses
 
 ## 📦 Installation
 
@@ -123,9 +128,13 @@ Access these via the options page:
 ## Tips for Best Results
 
 1. **Be Specific**: The more specific your selected text, the better the answer
-2. **Try Different Models**: Experiment with different AI models for various types of questions
-3. **Adjust Creativity**: Use lower values for factual answers, higher values for creative responses
-4. **Use Context**: Select relevant paragraphs or sections for better context
+2. **Ask Questions**: For best results, select text that forms clear questions (ends with ? or contains question words)
+3. **Try Different Models**: Experiment with different AI models for various types of questions
+4. **Adjust Creativity**: Use lower values for factual answers, higher values for creative responses
+5. **Use Context**: Select relevant paragraphs or sections for better context
+6. **Detailed Responses**: The extension automatically provides comprehensive answers with examples and explanations
+7. **Enhancement Feature**: If the initial response is too short, the extension will automatically retry for more detail
+8. **Non-Questions**: For statements or non-questions, the extension provides helpful guidance on how to improve your selection
 
 ## Troubleshooting
 
@@ -214,7 +223,18 @@ This extension is developed by Doulet Media. While this is a complete implementa
 
 ## Changelog
 
-### v3.0.0 (Latest Enhancement - NVIDIA NIM Integration)
+### v3.1.0 (Latest Enhancement - Ultra-Detailed Responses)
+- **Ultra-Detailed Responses**: Enhanced prompt generation for comprehensive, educational answers
+- **Smart Response Enhancement**: Automatic retry system for more detailed responses when answers are too short
+- **Empty Response Prevention**: Intelligent handling of non-questions with helpful user guidance
+- **Enhanced Model Parameters**: Optimized temperature (0.8), max tokens (4000+), and penalties for better detail
+- **Minimum Word Count**: Ensures comprehensive answers (100+ words minimum) with examples and explanations
+- **Improved Error Messages**: Better guidance for empty responses and non-questions
+- **Enhancement Notifications**: Visual feedback when responses are automatically enhanced
+- **Response Validation**: Advanced validation to ensure answer quality and completeness
+- **Version Update**: Updated to v3.1.0
+
+### v3.0.0 (Previous Enhancement - NVIDIA NIM Integration)
 - **NVIDIA NIM Fallback**: Added NVIDIA NIM as backup API when OpenRouter reaches daily limit (429 error)
 - **Dual API Support**: Primary OpenRouter with NVIDIA NIM fallback for uninterrupted service
 - **NVIDIA API Key Management**: Added fields in popup and options pages for NVIDIA API key
@@ -290,7 +310,8 @@ This extension is provided as-is for educational and personal use. The code is o
 
 ---
 
-[![Doulet Media](https://img.shields.io/badge/Doulet%20AI%20Assistant-v2.4.0-blue)]
+[![Doulet Media](https://img.shields.io/badge/Doulet%20AI%20Assistant-v3.1.0-blue)]
 [![OpenRouter Compatible](https://img.shields.io/badge/OpenRouter-Compatible-brightgreen)]
 [![Privacy First](https://img.shields.io/badge/Privacy-100%25%20Local-red)]
-[![Enhanced](https://img.shields.io/badge/Enhancement-Fully%20Enhanced-brightgreen)]
+[![Enhanced](https://img.shields.io/badge/Enhancement-Ultra%20Enhanced-brightgreen)]
+[![Detailed](https://img.shields.io/badge/Responses-Detailed%20&%20Comprehensive-orange)]

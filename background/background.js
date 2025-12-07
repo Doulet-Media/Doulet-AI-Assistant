@@ -103,8 +103,8 @@ async function getAIAnswer(request, sendResponse) {
                             content: prompt
                         }
                     ],
-                    temperature: temperature,
-                    max_tokens: maxTokens,
+                    temperature: temperature || 0.8,    // Slightly higher for creativity
+                    max_tokens: maxTokens || 4000,      // Increased for detailed responses
                     stream: false
                 }),
                 signal: controller.signal
@@ -218,11 +218,11 @@ async function getAnswerFromNvidiaNim(request, nvidiaApiKey, signal) {
                         content: prompt
                     }
                 ],
-                max_tokens: maxTokens || 512,
-                temperature: temperature || 1.0,
-                top_p: 1.0,
-                frequency_penalty: 0.0,
-                presence_penalty: 0.0,
+                max_tokens: maxTokens || 4000,      // Increased for detailed responses
+                temperature: temperature || 0.8,    // Slightly lower for more coherent detailed responses
+                top_p: 0.95,                        // Slightly lower for more focused responses
+                frequency_penalty: 0.1,             // Slight penalty to avoid repetition
+                presence_penalty: 0.1,              // Slight penalty to encourage topic diversity
                 stream: false
             }),
             signal: signal
