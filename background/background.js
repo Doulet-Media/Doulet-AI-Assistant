@@ -1,5 +1,18 @@
 // Background script for AI Question Answerer - Fast and Direct
 
+// NVIDIA NIM API Configuration
+const NVIDIA_API_CONFIG = {
+    endpoint: "https://integrate.api.nvidia.com/v1/chat/completions",
+    defaultModel: "meta/llama-4-scout-17b-16e-instruct",
+    availableModels: [
+        "meta/llama-4-maverick-17b-128e-instruct",
+        "meta/llama-4-scout-17b-16e-instruct",
+        "deepseek-ai/deepseek-r1",
+        "meta/llama-3.3-70b-instruct",
+        "qwen/qwen2.5-coder-32b-instruct"
+    ]
+};
+
 // Handle messages from popup and content scripts
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     try {
@@ -101,6 +114,53 @@ async function getAIAnswer(request, sendResponse) {
             
             if (!response.ok) {
                 const errorText = await response.text();
+                
+                // Check if it's a rate limit error (429)
+                if (response.status === 429) {
+                    console.log('OpenRouter rate limit reached, trying NVIDIA NIM...');
+                    
+                    // Try NVIDIA NIM API as fallback
+                    try {
+                        const nvidiaResult = await chrome.storage.sync.get(['nvidiaApiKey']);
+                        const nvidiaApiKey = nvidiaResult.nvidiaApiKey;
+                        
+                        if (nvidiaApiKey) {
+                            const nvidiaResponse = await getAnswerFromNvidiaNim({
+                                text, prompt, temperature, maxTokens
+                            }, nvidiaApiKey, controller.signal);
+                            
+                            if (nvidiaResponse.success) {
+                                sendResponse({
+                                    success: true,
+                                    answer: nvidiaResponse.answer,
+                                    model: nvidiaResponse.model,
+                                    tokens_used: nvidiaResponse.tokens_used,
+                                    fallback: true
+                                });
+                                return;
+                            } else {
+                                sendResponse({
+                                    success: false,
+                                    error: `NVIDIA NIM fallback failed: ${nvidiaResponse.error}. OpenRouter daily limit reached.`
+                                });
+                                return;
+                            }
+                        } else {
+                            sendResponse({
+                                success: false,
+                                error: `OpenRouter daily limit reached (429). Please enter a NVIDIA API key in settings for fallback support.`
+                            });
+                            return;
+                        }
+                    } catch (nvidiaError) {
+                        sendResponse({
+                            success: false,
+                            error: `NVIDIA NIM fallback failed: ${nvidiaError.message}. OpenRouter daily limit reached.`
+                        });
+                        return;
+                    }
+                }
+                
                 throw new Error(`HTTP error! Status: ${response.status} - ${errorText}`);
             }
             
@@ -138,14 +198,70 @@ async function getAIAnswer(request, sendResponse) {
     }
 }
 
-// Enhanced detailed answer handler with Hugging Face fallback
+// Get answer from NVIDIA NIM API
+async function getAnswerFromNvidiaNim(request, nvidiaApiKey, signal) {
+    try {
+        const { text, prompt, temperature, maxTokens } = request;
+        
+        const response = await fetch(NVIDIA_API_CONFIG.endpoint, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${nvidiaApiKey}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: NVIDIA_API_CONFIG.defaultModel,
+                messages: [
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                max_tokens: maxTokens || 512,
+                temperature: temperature || 1.0,
+                top_p: 1.0,
+                frequency_penalty: 0.0,
+                presence_penalty: 0.0,
+                stream: false
+            }),
+            signal: signal
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`NVIDIA NIM API error! Status: ${response.status} - ${errorText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data && data.choices && data.choices.length > 0) {
+            return {
+                success: true,
+                answer: data.choices[0].message.content,
+                model: NVIDIA_API_CONFIG.defaultModel,
+                tokens_used: data.usage?.total_tokens || 0
+            };
+        } else {
+            throw new Error('Invalid response from NVIDIA NIM API: No choices returned');
+        }
+        
+    } catch (error) {
+        console.error('NVIDIA NIM error:', error);
+        return {
+            success: false,
+            error: error.message || 'Failed to get answer from NVIDIA NIM'
+        };
+    }
+}
+
+// Enhanced detailed answer handler with NVIDIA NIM fallback
 async function getDetailedAnswer(request, sendResponse) {
     const { text, prompt, model, temperature, maxTokens } = request;
     
     try {
-        let result = await chrome.storage.sync.get(['apiKey', 'huggingFaceApiKey']);
+        let result = await chrome.storage.sync.get(['apiKey']);
         let apiKey = result.apiKey;
-        let huggingFaceApiKey = result.huggingFaceApiKey;
         
         if (!apiKey) {
             sendResponse({
@@ -204,21 +320,24 @@ async function getDetailedAnswer(request, sendResponse) {
                 
                 // Check if it's a rate limit error (429)
                 if (response.status === 429) {
-                    console.log('OpenRouter rate limit reached, trying Hugging Face...');
+                    console.log('OpenRouter rate limit reached, trying NVIDIA NIM...');
                     
-                    // Try Hugging Face API as fallback
-                    if (huggingFaceApiKey) {
-                        try {
-                            const hfResponse = await getAnswerFromHuggingFace({
+                    // Try NVIDIA NIM API as fallback
+                    try {
+                        const nvidiaResult = await chrome.storage.sync.get(['nvidiaApiKey']);
+                        const nvidiaApiKey = nvidiaResult.nvidiaApiKey;
+                        
+                        if (nvidiaApiKey) {
+                            const nvidiaResponse = await getAnswerFromNvidiaNim({
                                 text, prompt, temperature, maxTokens: maxTokens || 3000
-                            }, huggingFaceApiKey, controller.signal);
+                            }, nvidiaApiKey, controller.signal);
                             
-                            if (hfResponse.success) {
+                            if (nvidiaResponse.success) {
                                 sendResponse({
                                     success: true,
-                                    answer: hfResponse.answer,
-                                    model: 'huggingface',
-                                    tokens_used: hfResponse.tokens_used || 0,
+                                    answer: nvidiaResponse.answer,
+                                    model: nvidiaResponse.model,
+                                    tokens_used: nvidiaResponse.tokens_used || 0,
                                     enhanced: false,
                                     fallback: true
                                 });
@@ -226,21 +345,21 @@ async function getDetailedAnswer(request, sendResponse) {
                             } else {
                                 sendResponse({
                                     success: false,
-                                    error: `Hugging Face fallback failed: ${hfResponse.error}. OpenRouter daily limit reached.`
+                                    error: `NVIDIA NIM fallback failed: ${nvidiaResponse.error}. OpenRouter daily limit reached.`
                                 });
                                 return;
                             }
-                        } catch (hfError) {
+                        } else {
                             sendResponse({
                                 success: false,
-                                error: `Hugging Face fallback failed: ${hfError.message}. OpenRouter daily limit reached.`
+                                error: `OpenRouter daily limit reached (429). Please enter a NVIDIA API key in settings for fallback support.`
                             });
                             return;
                         }
-                    } else {
+                    } catch (nvidiaError) {
                         sendResponse({
                             success: false,
-                            error: `OpenRouter daily limit reached (429). Please enter a Hugging Face API key in settings for fallback support.`
+                            error: `NVIDIA NIM fallback failed: ${nvidiaError.message}. OpenRouter daily limit reached.`
                         });
                         return;
                     }
@@ -356,216 +475,6 @@ async function getDetailedAnswer(request, sendResponse) {
     }
 }
 
-// Hugging Face API handler for fallback
-async function getAnswerFromHuggingFace(request, huggingFaceApiKey, signal) {
-    try {
-        // Hugging Face Inference API endpoint
-        const response = await fetch('https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${huggingFaceApiKey}`,
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-                inputs: request.prompt,
-                parameters: {
-                    max_new_tokens: request.maxTokens || 3000,
-                    temperature: request.temperature || 0.7,
-                    do_sample: true,
-                    return_full_text: false
-                }
-            }),
-            signal: signal
-        });
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Hugging Face API error: ${response.status} - ${errorText}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data && data.length > 0 && data[0].generated_text) {
-            return {
-                success: true,
-                answer: data[0].generated_text,
-                tokens_used: data[0].generated_text.length / 4 // Rough estimate
-            };
-        } else {
-            throw new Error('Hugging Face returned empty response');
-        }
-        
-    } catch (error) {
-        console.error('Hugging Face API error:', error);
-        return {
-            success: false,
-            error: error.message
-        };
-    }
-}
-
-// Perplexity AI API handler for free online fallback
-async function getAnswerFromPerplexity(request, signal) {
-    try {
-        // Perplexity AI free API endpoint
-        const response = await fetch('https://api.perplexity.ai/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-                model: 'llama-3.1-sonar-small-32k-chat', // Free model
-                messages: [
-                    {
-                        role: 'user',
-                        content: request.prompt
-                    }
-                ],
-                temperature: request.temperature || 0.7,
-                max_tokens: request.maxTokens || 3000
-            }),
-            signal: signal
-        });
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Perplexity AI API error: ${response.status} - ${errorText}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data && data.choices && data.choices.length > 0) {
-            return {
-                success: true,
-                answer: data.choices[0].message.content,
-                tokens_used: data.usage?.total_tokens || 0
-            };
-        } else {
-            throw new Error('Perplexity AI returned empty response');
-        }
-        
-    } catch (error) {
-        console.error('Perplexity AI API error:', error);
-        return {
-            success: false,
-            error: error.message
-        };
-    }
-}
-
-// DeepSeek API handler for free online fallback
-async function getAnswerFromDeepSeek(request, signal) {
-    try {
-        // DeepSeek free API endpoint
-        const response = await fetch('https://api.deepseek.com/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-                model: 'deepseek-chat', // Free model
-                messages: [
-                    {
-                        role: 'user',
-                        content: request.prompt
-                    }
-                ],
-                temperature: request.temperature || 0.7,
-                max_tokens: request.maxTokens || 3000
-            }),
-            signal: signal
-        });
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`DeepSeek API error: ${response.status} - ${errorText}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data && data.choices && data.choices.length > 0) {
-            return {
-                success: true,
-                answer: data.choices[0].message.content,
-                tokens_used: data.usage?.total_tokens || 0
-            };
-        } else {
-            throw new Error('DeepSeek returned empty response');
-        }
-        
-    } catch (error) {
-        console.error('DeepSeek API error:', error);
-        return {
-            success: false,
-            error: error.message
-        };
-    }
-}
-
-// Test Perplexity AI connection
-async function testPerplexityConnection(sendResponse) {
-    try {
-        const response = await fetch('https://api.perplexity.ai/models', {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
-        
-        if (response.ok) {
-            sendResponse({
-                success: true,
-                message: 'Perplexity AI connection successful'
-            });
-        } else {
-            sendResponse({
-                success: false,
-                error: `Perplexity AI connection failed: ${response.status}`
-            });
-        }
-        
-    } catch (error) {
-        console.error('Perplexity AI connection test error:', error);
-        sendResponse({
-            success: false,
-            error: `Perplexity AI connection failed: ${error.message}`
-        });
-    }
-}
-
-// Test DeepSeek connection
-async function testDeepSeekConnection(sendResponse) {
-    try {
-        const response = await fetch('https://api.deepseek.com/v1/models', {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
-        
-        if (response.ok) {
-            sendResponse({
-                success: true,
-                message: 'DeepSeek connection successful'
-            });
-        } else {
-            sendResponse({
-                success: false,
-                error: `DeepSeek connection failed: ${response.status}`
-            });
-        }
-        
-    } catch (error) {
-        console.error('DeepSeek connection test error:', error);
-        sendResponse({
-            success: false,
-            error: `DeepSeek connection failed: ${error.message}`
-        });
-    }
-}
 
 // Advanced prompt enhancement for detailed responses
 function enhancePromptForDetailedAnswer(text, settings) {

@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const customPromptTextarea = document.getElementById('customPrompt');
     const timeoutInput = document.getElementById('timeout');
     const modelSelect = document.getElementById('model');
+    const nvidiaApiKeyInput = document.getElementById('nvidiaApiKey');
     
     const saveBtn = document.getElementById('saveBtn');
     const resetBtn = document.getElementById('resetBtn');
@@ -48,6 +49,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Model selection
         if (result.model) modelSelect.value = result.model;
         
+        // NVIDIA API key
+        if (result.nvidiaApiKey) nvidiaApiKeyInput.value = result.nvidiaApiKey;
+        
         // Load free models
         if (result.freeModels && result.freeModels.length > 0) {
             populateModelSelect(result.freeModels);
@@ -79,7 +83,8 @@ document.addEventListener('DOMContentLoaded', function() {
             anonymousMode: anonymousModeCheckbox.checked,
             customPrompt: customPromptTextarea.value,
             timeout: parseInt(timeoutInput.value) || 30,
-            model: modelSelect.value
+            model: modelSelect.value,
+            nvidiaApiKey: nvidiaApiKeyInput.value
         };
 
         chrome.storage.sync.set(settings, function() {
@@ -110,7 +115,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 clearHistory: false,
                 anonymousMode: false,
                 customPrompt: '',
-                timeout: 30
+                timeout: 30,
+                nvidiaApiKey: ''
             };
 
             // Reset form values
@@ -124,6 +130,7 @@ document.addEventListener('DOMContentLoaded', function() {
             anonymousModeCheckbox.checked = defaults.anonymousMode;
             customPromptTextarea.value = defaults.customPrompt;
             timeoutInput.value = defaults.timeout;
+            nvidiaApiKeyInput.value = defaults.nvidiaApiKey;
 
             chrome.storage.sync.set(defaults, function() {
                 showStatus('Settings reset to defaults!', 'success');

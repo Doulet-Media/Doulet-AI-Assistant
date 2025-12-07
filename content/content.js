@@ -31,13 +31,37 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
 
 // Handle messages from options page and background script
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-    if (request.action === 'updateSettings') {
-        settings = request.settings;
-        sendResponse({success: true});
-    } else if (request.action === 'handleContextMenuSelection') {
-        currentSelection = request.text;
-        getAIAnswer(currentSelection);
-        sendResponse({success: true});
+    try {
+        // Validate extension context before processing
+        if (!chrome || !chrome.runtime) {
+            console.warn('Extension context invalidated in message listener');
+            if (sendResponse) {
+                try {
+                    sendResponse({success: false, error: 'Extension context invalidated'});
+                } catch (error) {
+                    console.warn('Failed to send error response:', error);
+                }
+            }
+            return;
+        }
+        
+        if (request.action === 'updateSettings') {
+            settings = request.settings;
+            sendResponse({success: true});
+        } else if (request.action === 'handleContextMenuSelection') {
+            currentSelection = request.text;
+            getAIAnswer(currentSelection);
+            sendResponse({success: true});
+        }
+    } catch (error) {
+        console.error('Error in message listener:', error);
+        if (sendResponse) {
+            try {
+                sendResponse({success: false, error: 'Message handling failed'});
+            } catch (sendError) {
+                console.warn('Failed to send error response:', sendError);
+            }
+        }
     }
 });
 
@@ -134,25 +158,29 @@ function createAnswerModal() {
             <div class="modal-content">
                 <div class="modal-header">
                     <h3>Doulet AI Assistant</h3>
-                    <button class="close-btn">&times;</button>
+                    <button class="close-btn" aria-label="Close">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="loading">
-                        <div class="spinner"></div>
+                        <div class="spinner" aria-hidden="true"></div>
                         <p>Getting AI answer...</p>
+                        <div class="loading-subtext">This may take a moment. Please wait...</div>
                     </div>
                     <div class="answer-container" style="display: none;">
                         <div class="answer-header">
                             <div class="answer-title">AI Response</div>
                             <div class="model-badge" id="modelBadge">Model: Loading...</div>
                         </div>
-                        <div class="answer"></div>
+                        <div class="answer" role="status" aria-live="polite"></div>
+                        <div class="answer-footer">
+                            <small class="answer-help">Tip: Use Ctrl+C to copy or click the Copy button below</small>
+                        </div>
                     </div>
-                    <div class="error" style="display: none;"></div>
+                    <div class="error" style="display: none;" role="alert"></div>
                 </div>
                 <div class="modal-footer">
-                    <button class="copy-btn">📋 Copy Answer</button>
-                    <button class="close-footer-btn">✕ Close</button>
+                    <button class="copy-btn" aria-label="Copy answer to clipboard">📋 Copy Answer</button>
+                    <button class="close-footer-btn" aria-label="Close modal">✕ Close</button>
                 </div>
             </div>
         </div>
@@ -245,15 +273,23 @@ function createAnswerModal() {
         border-top: 5px solid #667eea;
         border-radius: 50%;
         animation: spin 1s linear infinite;
-        margin: 0 auto 25px;
+        margin: 0 auto 15px;
         box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
     `;
     
     loading.querySelector('p').style.cssText = `
-        margin: 0;
+        margin: 0 0 8px 0;
         color: #495057;
         font-size: 16px;
-        font-weight: 500;
+        font-weight: 600;
+    `;
+    
+    const loadingSubtext = loading.querySelector('.loading-subtext');
+    loadingSubtext.style.cssText = `
+        margin: 0;
+        color: #6c757d;
+        font-size: 13px;
+        font-weight: 400;
     `;
     
     const answer = modal.querySelector('.answer');
@@ -267,6 +303,21 @@ function createAnswerModal() {
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         border: 1px solid #e9ecef;
         white-space: pre-wrap;
+        max-height: 40vh;
+        overflow-y: auto;
+    `;
+    
+    const answerFooter = modal.querySelector('.answer-footer');
+    answerFooter.style.cssText = `
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #e9ecef;
+    `;
+    
+    const answerHelp = answerFooter.querySelector('.answer-help');
+    answerHelp.style.cssText = `
+        color: #6c757d;
+        font-style: italic;
     `;
     
     const error = modal.querySelector('.error');
@@ -278,6 +329,22 @@ function createAnswerModal() {
         border-radius: 12px;
         margin: 15px 0;
         box-shadow: 0 2px 10px rgba(220, 53, 69, 0.1);
+        font-size: 14px;
+        line-height: 1.5;
+    `;
+    
+    // Add helpful error suggestions
+    error.innerHTML = `
+        <strong>Oops!</strong> Something went wrong. Here are some things to try:
+        <ul style="margin-top: 8px; margin-left: 20px;">
+            <li>Check your internet connection</li>
+            <li>Verify your API key is correct</li>
+            <li>Try selecting different text</li>
+            <li>Wait a moment and try again (you may have hit the rate limit)</li>
+        </ul>
+        <div style="margin-top: 10px; font-size: 12px; color: #495057;">
+            Tip: If problems persist, check the extension settings or contact support.
+        </div>
     `;
     
     const modalFooter = modal.querySelector('.modal-footer');
@@ -347,18 +414,73 @@ function hideModal() {
     }
 }
 
-// Copy answer to clipboard
+// Copy answer to clipboard with enhanced feedback
 function copyAnswer() {
     const answerText = document.querySelector('.answer').textContent;
     navigator.clipboard.writeText(answerText).then(() => {
         const copyBtn = document.querySelector('.copy-btn');
         const originalText = copyBtn.textContent;
-        copyBtn.textContent = 'Copied!';
+        const originalBackground = copyBtn.style.background;
+        
+        // Enhanced feedback
+        copyBtn.textContent = '✅ Copied to Clipboard!';
         copyBtn.style.background = '#28a745';
+        copyBtn.style.transform = 'scale(1.05)';
+        
+        // Play success sound
+        playSuccessSound();
+        
         setTimeout(() => {
             copyBtn.textContent = originalText;
+            copyBtn.style.background = originalBackground;
+            copyBtn.style.transform = 'scale(1)';
         }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        // Fallback: create temporary textarea
+        const textArea = document.createElement('textarea');
+        textArea.value = answerText;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            // Show fallback success message
+            const copyBtn = document.querySelector('.copy-btn');
+            copyBtn.textContent = '✅ Copied (fallback)!';
+            copyBtn.style.background = '#28a745';
+            setTimeout(() => {
+                copyBtn.textContent = '📋 Copy Answer';
+                copyBtn.style.background = '';
+            }, 2000);
+        } catch (fallbackErr) {
+            console.error('Fallback copy also failed:', fallbackErr);
+        } finally {
+            document.body.removeChild(textArea);
+        }
     });
+}
+
+// Enhanced success sound
+function playSuccessSound() {
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5
+        oscillator.frequency.exponentialRampToValueAtTime(440, audioContext.currentTime + 0.1); // A4
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+        
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.15);
+    } catch (e) {
+        // Ignore audio errors
+    }
 }
 
 // Handle text selection with enhanced universal compatibility
@@ -367,6 +489,12 @@ function handleTextSelection() {
         // Check if extension context is still valid before processing
         if (!chrome || !chrome.runtime) {
             console.warn('Extension context invalidated, ignoring text selection');
+            return;
+        }
+        
+        // Additional validation for chrome APIs
+        if (!chrome.storage || !chrome.storage.sync) {
+            console.warn('Extension storage not available, ignoring text selection');
             return;
         }
         
@@ -489,6 +617,12 @@ observer.observe(document.body, {
 
 // Enhanced selection handler with Google Workspace support
 function enhancedSelectionHandler() {
+    // Validate extension context before processing
+    if (!chrome || !chrome.runtime) {
+        console.warn('Extension context invalidated, ignoring enhanced selection handler');
+        return;
+    }
+    
     // Check if browser selection is blocked
     if (settings.blockBrowserSelection) {
         // Prevent default browser selection behavior
@@ -518,49 +652,8 @@ function enhancedSelectionHandler() {
         };
     }
     
-    // Google Workspace compatibility
-    if (window.location.hostname === 'docs.google.com' ||
-        window.location.hostname === 'sheets.google.com' ||
-        window.location.hostname === 'slides.google.com') {
-        
-        // Lightweight Google Workspace support - minimal overhead
-        const googleWorkspaceObserver = new MutationObserver((mutations) => {
-            // Only observe for critical elements, don't interfere with Google's functionality
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'childList') {
-                    // Check if new content was added that we need to handle
-                    const addedNodes = Array.from(mutation.addedNodes);
-                    addedNodes.forEach(node => {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            // Only add minimal event listeners for selection
-                            node.addEventListener('mouseup', () => {
-                                // Small delay to ensure Google's selection is complete
-                                setTimeout(handleTextSelection, 50);
-                            }, { passive: true });
-                        }
-                    });
-                }
-            });
-        });
-        
-        // Observe document body with minimal impact
-        googleWorkspaceObserver.observe(document.body, {
-            childList: true,
-            subtree: false // Only observe direct children to minimize performance impact
-        });
-        
-        // Add Google Workspace specific selection handler
-        document.addEventListener('mouseup', function(e) {
-            // Lightweight check for Google Workspace content
-            const target = e.target.closest('.kix-appview-editor, .waffle-table, .slides-editor');
-            if (target) {
-                // Small delay to ensure Google's selection is complete
-                setTimeout(handleTextSelection, 100);
-            }
-        }, { passive: true });
-        
-        console.log('Lightweight Google Workspace support enabled');
-    }
+    // Note: Google Workspace support has been disabled to prevent loading issues
+    // The extension now focuses on universal compatibility across all websites
 }
 
 // Enhanced selection visibility with safe DOM operations
@@ -569,6 +662,12 @@ function enhanceSelectionVisibility() {
         // Check if extension context is still valid
         if (!chrome || !chrome.runtime) {
             console.warn('Extension context invalidated, skipping selection enhancement');
+            return;
+        }
+        
+        // Additional validation for chrome APIs
+        if (!chrome.storage || !chrome.storage.sync) {
+            console.warn('Extension storage not available, skipping selection enhancement');
             return;
         }
         
@@ -613,6 +712,12 @@ function resetSelectionVisibility() {
         // Check if extension context is still valid
         if (!chrome || !chrome.runtime) {
             console.warn('Extension context invalidated, skipping selection reset');
+            return;
+        }
+        
+        // Additional validation for chrome APIs
+        if (!chrome.storage || !chrome.storage.sync) {
+            console.warn('Extension storage not available, skipping selection reset');
             return;
         }
         
@@ -664,89 +769,8 @@ function getSelectedNodes(range) {
     return nodes;
 }
 
-// Enhanced Google Workspace compatibility
-function enhanceGoogleWorkspaceSupport() {
-    // Handle Google Docs specific elements
-    if (window.location.hostname === 'docs.google.com') {
-        // Add mutation observer for dynamic content
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'childList') {
-                    // Re-apply styles to new content
-                    const newNodes = Array.from(mutation.addedNodes);
-                    newNodes.forEach(node => {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            // Ensure our button and modal can be created in Google Docs
-                            try {
-                                createAnswerButton();
-                                createAnswerModal();
-                            } catch (error) {
-                                console.warn('Failed to create elements in Google Docs:', error);
-                            }
-                        }
-                    });
-                }
-            });
-        });
-        
-        // Observe document body for changes
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-        
-        // Handle Google Docs iframe issues
-        if (window.self !== window.top) {
-            // We're in an iframe, try to access parent
-            try {
-                if (window.parent && window.parent.document) {
-                    // Create elements in parent document if possible
-                    const parentDoc = window.parent.document;
-                    if (parentDoc && parentDoc.body) {
-                        // This helps with Google Docs embedded content
-                        console.log('Enhanced Google Docs iframe support enabled');
-                    }
-                }
-            } catch (error) {
-                console.warn('Google Docs iframe access restricted:', error);
-            }
-        }
-    }
-    
-    // Handle Gmail specific elements
-    if (window.location.hostname === 'mail.google.com') {
-        // Gmail often uses shadow DOM and complex structures
-        // Add special handling for Gmail content areas
-        const gmailContentAreas = [
-            '.adn', // Gmail message content
-            '.gs',  // Gmail subject and headers
-            '.gE'   // Gmail message body
-        ];
-        
-        gmailContentAreas.forEach(selector => {
-            try {
-                const elements = document.querySelectorAll(selector);
-                elements.forEach(element => {
-                    // Ensure our extension can interact with Gmail content
-                    element.style.userSelect = 'text';
-                    element.style.webkitUserSelect = 'text';
-                });
-            } catch (error) {
-                console.warn('Failed to enhance Gmail content area:', error);
-            }
-        });
-    }
-    
-    // Handle Google Sheets
-    if (window.location.hostname === 'sheets.google.com') {
-        // Google Sheets has complex cell selection
-        // Add special handling for spreadsheet data
-        console.log('Enhanced Google Sheets support enabled');
-    }
-}
-
-// Initialize Google Workspace support
-enhanceGoogleWorkspaceSupport();
+// Note: Google Workspace support has been disabled to prevent loading issues
+// The extension now focuses on universal compatibility across all websites
 
 // Get AI answer
 async function getAIAnswer(text) {
@@ -846,15 +870,34 @@ async function getAIAnswer(text) {
         }
     }, timeout * 1000);
     
-    // Build simple, direct prompt for students
+    // Build detailed, comprehensive prompt for students
     let prompt = '';
     
-    // Add custom prompt if provided, otherwise use direct approach
+    // Add custom prompt if provided, otherwise use enhanced approach
     if (settings.customPrompt && settings.customPrompt.trim()) {
         prompt += settings.customPrompt.trim() + '\n\n';
     } else {
-        // Direct prompt for students - just give the answer
-        prompt = `Answer this question directly with the answer only. No explanations, no introductions, no conclusions. Just provide the answer:\n\n"${cleanText}"`;
+        // Enhanced prompt for detailed, comprehensive answers
+        prompt = `You are an expert AI assistant providing detailed, comprehensive answers for students.
+        Answer the following question with the most thorough, informative, and educational response possible.
+        
+        REQUIREMENTS:
+        - Provide EXTREMELY detailed and comprehensive explanations
+        - Include multiple relevant examples, case studies, and practical applications
+        - Explain concepts step-by-step with clear reasoning
+        - Include relevant facts, statistics, and supporting evidence
+        - Use proper formatting (bullet points, numbered lists, paragraphs) when appropriate
+        - Ensure the answer is educational and informative
+        - DO NOT provide one-sentence or overly simple answers
+        - DO NOT skip important details or explanations
+        - DO NOT provide introductions or conclusions - go straight to the answer
+        - Focus on delivering complete, detailed information
+        - MINIMUM 300 words required for comprehensive coverage
+        
+        QUESTION:
+        "${cleanText}"
+        
+        DETAILED ANSWER (comprehensive, educational, and thorough):`;
     }
     
     // Add language preference if set
@@ -877,13 +920,23 @@ async function getAIAnswer(text) {
         return;
     }
     
+    // Additional context validation
+    if (!chrome.storage || !chrome.storage.sync) {
+        console.warn('Extension storage not available, context may be invalidated');
+        isProcessing = false;
+        loading.style.display = 'none';
+        error.style.display = 'block';
+        error.textContent = 'Extension storage not available. Please reload the extension.';
+        return;
+    }
+    
     chrome.runtime.sendMessage({
         action: 'getAnswer',
         text: currentSelection,
         prompt: prompt,
         model: settings.model || 'amazon/nova-2-lite-v1:free',
-        temperature: settings.temperature || 0.7,
-        maxTokens: settings.maxTokens || 2000  // Unlimited output for students
+        temperature: settings.temperature || 0.8,  // Slightly higher for more creativity
+        maxTokens: settings.maxTokens || 4000      // Increased tokens for detailed responses
     }, function(response) {
         clearTimeout(requestTimeout);
         isProcessing = false;
@@ -948,6 +1001,12 @@ function playNotificationSound() {
 // Get API key from background script
 async function getApiKeyFromBackground() {
     try {
+        // Validate extension context before sending message
+        if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
+            console.warn('Extension context invalidated, cannot get API key from background');
+            return null;
+        }
+        
         const result = await chrome.runtime.sendMessage({
             action: 'getApiKey'
         });
@@ -963,6 +1022,12 @@ document.addEventListener('keydown', function(e) {
     // Check extension context before processing
     if (!chrome || !chrome.runtime) {
         console.warn('Extension context invalidated, ignoring keyboard shortcut');
+        return;
+    }
+    
+    // Additional validation for chrome APIs
+    if (!chrome.storage || !chrome.storage.sync || !chrome.runtime.sendMessage) {
+        console.warn('Extension APIs not available, ignoring keyboard shortcut');
         return;
     }
     
@@ -1097,8 +1162,41 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+// Enhanced keyboard shortcuts for better student experience
+document.addEventListener('keydown', function(e) {
+    // Check extension context before processing
+    if (!chrome || !chrome.runtime) {
+        return;
+    }
+    
+    // Copy answer with Ctrl+C when modal is open
+    if (document.getElementById('answersai-modal') &&
+        document.getElementById('answersai-modal').style.display === 'block') {
+        if (e.ctrlKey && e.key.toLowerCase() === 'c') {
+            e.preventDefault();
+            copyAnswer();
+            return;
+        }
+    }
+    
+    // Close modal with Escape key
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('answersai-modal');
+        if (modal && modal.style.display === 'block') {
+            hideModal();
+            return;
+        }
+    }
+});
+
 // Function to toggle browser selection blocking
 function toggleSelectionBlocking(enabled) {
+    // Validate extension context before modifying DOM
+    if (!chrome || !chrome.runtime) {
+        console.warn('Extension context invalidated, cannot toggle selection blocking');
+        return;
+    }
+    
     if (enabled) {
         // Disable browser text selection
         document.addEventListener('selectstart', preventSelection, { passive: false });
@@ -1147,6 +1245,12 @@ function toggleSelectionBlocking(enabled) {
 
 // Function to prevent browser selection
 function preventSelection(e) {
+    // Validate extension context before processing
+    if (!chrome || !chrome.runtime) {
+        console.warn('Extension context invalidated, cannot prevent selection');
+        return true;
+    }
+    
     if (settings.blockBrowserSelection) {
         e.preventDefault();
         e.stopPropagation();
@@ -1158,6 +1262,12 @@ function preventSelection(e) {
 // Initialize text selection functionality
 (function initializeTextSelection() {
     try {
+        // Validate extension context before initialization
+        if (!chrome || !chrome.runtime) {
+            console.warn('Extension context invalidated, cannot initialize text selection');
+            return;
+        }
+        
         console.log('Doulet AI Assistant content script loaded');
         
         // Create initial elements
@@ -1170,6 +1280,12 @@ function preventSelection(e) {
         // Add a fallback text selection handler that's always active
         document.addEventListener('selectionchange', function() {
             try {
+                // Validate extension context before processing
+                if (!chrome || !chrome.runtime) {
+                    console.warn('Extension context invalidated, ignoring selection change');
+                    return;
+                }
+                
                 // Small delay to ensure selection is complete
                 setTimeout(handleTextSelection, 50);
             } catch (error) {
@@ -1179,6 +1295,12 @@ function preventSelection(e) {
         
         // Add additional mouseup listener for better compatibility
         document.addEventListener('mouseup', function(e) {
+            // Validate extension context before processing
+            if (!chrome || !chrome.runtime) {
+                console.warn('Extension context invalidated, ignoring mouseup');
+                return;
+            }
+            
             // Small delay to ensure selection is complete
             setTimeout(handleTextSelection, 10);
         }, { passive: true });

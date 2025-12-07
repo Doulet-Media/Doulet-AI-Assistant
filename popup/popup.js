@@ -2,6 +2,7 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     const apiKeyInput = document.getElementById('apiKey');
+    const nvidiaApiKeyInput = document.getElementById('nvidiaApiKey');
     const modelSelect = document.getElementById('model');
     const temperatureSlider = document.getElementById('temperature');
     const maxTokensSlider = document.getElementById('maxTokens');
@@ -15,6 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load saved settings
     chrome.storage.sync.get([
         'apiKey',
+        'nvidiaApiKey',
         'model',
         'temperature',
         'maxTokens',
@@ -32,6 +34,11 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             // Show API key input if not auto-loaded
             showStatus('Please enter your API key', 'disconnected');
+        }
+        
+        // Load NVIDIA API key
+        if (result.nvidiaApiKey) {
+            nvidiaApiKeyInput.value = result.nvidiaApiKey;
         }
         
         if (result.model) modelSelect.value = result.model;
@@ -79,6 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const settings = {
             apiKey: apiKeyInput.value.trim(),
+            nvidiaApiKey: nvidiaApiKeyInput.value.trim(),
             model: modelSelect.value,
             temperature: parseFloat(temperatureSlider.value),
             maxTokens: parseInt(maxTokensSlider.value),

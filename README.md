@@ -1,8 +1,8 @@
 # Doulet AI Assistant - Free AI Assistant Extension
 
-A powerful web extension that provides AI-powered answers when you highlight text on any webpage. Developed by Doulet Media using completely free OpenRouter AI models.
+A powerful web extension that provides AI-powered answers when you highlight text on any webpage. Developed by Doulet Media using completely free OpenRouter AI models with NVIDIA NIM fallback support.
 
-![Doulet AI Assistant](https://img.shields.io/badge/Doulet%20AI%20Assistant-v2.4.1-blue)
+![Doulet AI Assistant](https://img.shields.io/badge/Doulet%20AI%20Assistant-v3.0.0-blue)
 ![Free Models](https://img.shields.io/badge/Models-All%20Free%20Models-green)
 ![Privacy](https://img.shields.io/badge/Privacy-100%25%20Local-red)
 ![OpenRouter](https://img.shields.io/badge/OpenRouter-Compatible-brightgreen)
@@ -149,7 +149,7 @@ Access these via the options page:
 - **Local Storage**: Your API keys are stored locally in your browser only
 - **Secure Communication**: All API calls use HTTPS encryption
 - **OpenRouter Privacy**: Your usage is covered by OpenRouter's privacy policy
-- **Hugging Face Privacy**: Your fallback usage is covered by Hugging Face's privacy policy
+- **NVIDIA NIM Privacy**: Your fallback usage is covered by NVIDIA's privacy policy
 
 ## Support
 
@@ -172,44 +172,59 @@ This extension is developed by Doulet Media. While this is a complete implementa
 - This extension uses OpenRouter's API services
 - You must comply with OpenRouter's terms of service
 - Some AI models may have specific usage guidelines (check model documentation)
-- Hugging Face fallback uses Mistral-7B-Instruct-v0.2 model
+- NVIDIA NIM fallback uses enterprise-grade LLMs
 - This extension is for educational and personal use only
 - **Never Published**: This extension will never be published on public extension stores
 
-## Hugging Face Setup
+## NVIDIA NIM Setup
 
-### Getting Your Hugging Face API Key
+### Getting Your NVIDIA NIM API Key
 
-1. **Visit Hugging Face**: Go to [huggingface.co](https://huggingface.co)
-2. **Create Account**: Sign up for a free account
+1. **Visit NVIDIA NIM**: Go to [build.nvidia.com/models](https://build.nvidia.com/models)
+2. **Create Account**: Sign up for a free NVIDIA account
 3. **Get API Key**:
-   - Go to [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
-   - Click "New token"
+   - Navigate to the API keys section
+   - Create a new API key for NIM
    - Copy the generated token
 4. **Enter in Extension**:
-   - Open extension options
-   - Paste your Hugging Face API key in the "Hugging Face API Key" field
+   - Open extension options or popup settings
+   - Paste your NVIDIA API key in the "NVIDIA NIM API Key" field
    - Save settings
 
 ### How Fallback Works
 
 1. **Primary API**: Extension first tries OpenRouter
 2. **Rate Limit Detection**: Automatically detects 429 (rate limit) errors
-3. **Seamless Switch**: Automatically switches to Hugging Face
+3. **Seamless Switch**: Automatically switches to NVIDIA NIM
 4. **User Notification**: Shows "fallback: true" in the response
 5. **Back to Primary**: Returns to OpenRouter when limit resets
 
-### Hugging Face Model Information
+### NVIDIA NIM Model Information
 
-- **Model**: Mistral-7B-Instruct-v0.2
-- **Type**: Instruction-tuned LLM
-- **Size**: 7 billion parameters
-- **Quality**: High-quality text generation
+- **Default Model**: meta/llama-4-scout-17b-16e-instruct
+- **Available Models**:
+  - meta/llama-4-maverick-17b-128e-instruct
+  - meta/llama-4-scout-17b-16e-instruct
+  - deepseek-ai/deepseek-r1
+  - meta/llama-3.3-70b-instruct
+  - qwen/qwen2.5-coder-32b-instruct
+- **Type**: Enterprise-grade LLMs
+- **Performance**: High-quality, fast responses
 - **Cost**: Free tier available
 
 ## Changelog
 
-### v2.4.1 (Latest Enhancement - Bug Fix)
+### v3.0.0 (Latest Enhancement - NVIDIA NIM Integration)
+- **NVIDIA NIM Fallback**: Added NVIDIA NIM as backup API when OpenRouter reaches daily limit (429 error)
+- **Dual API Support**: Primary OpenRouter with NVIDIA NIM fallback for uninterrupted service
+- **NVIDIA API Key Management**: Added fields in popup and options pages for NVIDIA API key
+- **Enhanced Fallback Logic**: Automatic switching with clear user feedback
+- **NVIDIA Model Support**: Default model meta/llama-4-scout-17b-16e-instruct with additional models
+- **Updated Documentation**: Replaced Hugging Face references with NVIDIA NIM setup
+- **Improved Reliability**: 2-tier fallback strategy (OpenRouter → NVIDIA NIM)
+- **Version Update**: Updated to v3.0.0
+
+### v2.4.1 (Previous Enhancement - Bug Fix)
 - **Enhanced Model Fetching**: Improved algorithm to fetch ALL free models from OpenRouter
 - **Automatic Model Discovery**: Models are automatically fetched when API key is entered
 - **Smart Filtering**: Enhanced filtering to include all models with "free" in their names

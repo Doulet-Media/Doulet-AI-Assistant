@@ -25,6 +25,12 @@
         </div>
 
         <div class="form-group">
+            <label for="nvidiaApiKey">NVIDIA NIM API Key (Optional)</label>
+            <input type="password" id="nvidiaApiKey" placeholder="Enter your NVIDIA API key for fallback support">
+            <small class="helper-text">Optional: Enter NVIDIA API key for fallback when OpenRouter reaches daily limit (429 error)</small>
+        </div>
+
+        <div class="form-group">
             <label for="model">AI Model</label>
             <select id="model">
                 <option value="">Loading free models...</option>

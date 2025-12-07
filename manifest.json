@@ -38,9 +38,7 @@
   ],
   "host_permissions": [
     "https://*.openrouter.ai/*",
-    "https://api-inference.huggingface.co/*",
-    "https://api.perplexity.ai/*",
-    "https://api.deepseek.com/*"
+    "https://integrate.api.nvidia.com/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
