@@ -140,26 +140,43 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Test API connection
     testBtn.addEventListener('click', function() {
-        chrome.storage.sync.get(['apiKey'], function(result) {
-            if (!result.apiKey) {
-                showStatus('Please enter your API key in the popup settings first.', 'error');
-                return;
-            }
-
-            showStatus('Testing connection...', 'success');
+        chrome.storage.sync.get(['nvidiaApiKey', 'apiKey'], function(result) {
+            const nvidiaApiKey = result.nvidiaApiKey;
+            const apiKey = result.apiKey;
             
-            chrome.runtime.sendMessage({
-                action: 'testConnection',
-                apiKey: result.apiKey
-            }, function(response) {
-                if (response && response.success) {
-                    showStatus('Connection successful! Your API key is working.', 'success');
-                    // Fetch free models after successful connection
-                    fetchAndPopulateModels(result.apiKey);
-                } else {
-                    showStatus('Connection failed. Please check your API key.', 'error');
-                }
-            });
+            if (nvidiaApiKey) {
+                // Test NVIDIA NIM API (primary)
+                showStatus('Testing NVIDIA NIM connection...', 'success');
+                
+                chrome.runtime.sendMessage({
+                    action: 'testNvidiaConnection',
+                    nvidiaApiKey: nvidiaApiKey
+                }, function(response) {
+                    if (response && response.success) {
+                        showStatus('NVIDIA NIM connection successful! ✓', 'success');
+                    } else {
+                        showStatus('NVIDIA NIM connection failed. Please check your API key.', 'error');
+                    }
+                });
+            } else if (apiKey) {
+                // Test OpenRouter API (fallback)
+                showStatus('Testing OpenRouter connection...', 'success');
+                
+                chrome.runtime.sendMessage({
+                    action: 'testConnection',
+                    apiKey: apiKey
+                }, function(response) {
+                    if (response && response.success) {
+                        showStatus('OpenRouter connection successful! ✓', 'success');
+                        // Fetch free models after successful connection
+                        fetchAndPopulateModels(apiKey);
+                    } else {
+                        showStatus('OpenRouter connection failed. Please check your API key.', 'error');
+                    }
+                });
+            } else {
+                showStatus('Please enter NVIDIA NIM API key (primary) or OpenRouter API key (fallback).', 'error');
+            }
         });
     });
 

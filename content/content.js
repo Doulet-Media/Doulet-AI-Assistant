@@ -1,11 +1,16 @@
 // Content script for AnswersAI extension
 
-// Get display name for model (only supports nova-2-lite-v1:free)
+// Get display name for NVIDIA NIM model
 function getModelDisplayName(modelId) {
-    if (modelId === 'amazon/nova-2-lite-v1:free') {
-        return 'Amazon Nova 2 Lite (Free)';
-    }
-    return modelId;
+    const modelNames = {
+        'meta/llama-3.3-70b-instruct': 'Meta Llama 3.3 70B Instruct',
+        'meta/llama-4-maverick-17b-128e-instruct': 'Meta Llama 4 Maverick 17B Instruct',
+        'meta/llama-4-scout-17b-16e-instruct': 'Meta Llama 4 Scout 17B Instruct',
+        'deepseek-ai/deepseek-r1': 'DeepSeek R1',
+        'qwen/qwen2.5-coder-32b-instruct': 'Qwen 2.5 Coder 32B Instruct'
+    };
+    
+    return modelNames[modelId] || modelId;
 }
 
 // Enhanced selection and visibility features
@@ -79,35 +84,34 @@ function createAnswerButton() {
     button.style.cssText = `
         position: fixed;
         z-index: 1000000;
-        width: 45px;
-        height: 45px;
+        width: 50px;
+        height: 50px;
         border-radius: 50%;
         border: none;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #4CAF50 0%, #81C784 100%);
         color: white;
-        font-size: 20px;
+        font-size: 22px;
         font-weight: bold;
         cursor: pointer;
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 8px 25px rgba(76, 175, 80, 0.5);
+        transition: all 0.3s ease-in-out;
         display: none;
         opacity: 0;
         user-select: none;
         -webkit-user-select: none;
         touch-action: manipulation;
-        backdrop-filter: blur(10px);
-        border: 2px solid rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(12px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
     `;
     
     button.addEventListener('mouseenter', function() {
-        this.style.transform = 'translateY(-3px) scale(1.1)';
-        this.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.5)';
-        this.style.zIndex = '1000001';
+        this.style.transform = 'scale(1.15)';
+        this.style.boxShadow = '0 10px 30px rgba(76, 175, 80, 0.6)';
     });
     
     button.addEventListener('mouseleave', function() {
-        this.style.transform = 'translateY(0) scale(1)';
-        this.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
+        this.style.transform = 'scale(1)';
+        this.style.boxShadow = '0 8px 25px rgba(76, 175, 80, 0.5)';
     });
     
     button.addEventListener('click', function(e) {
@@ -218,13 +222,15 @@ function createAnswerModal() {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #4CAF50 0%, #81C784 100%);
         color: white;
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
     `;
     
     modalHeader.querySelector('h3').style.cssText = `
         margin: 0;
-        font-size: 20px;
+        font-size: 22px;
         font-weight: 700;
         display: flex;
         align-items: center;
@@ -237,7 +243,7 @@ function createAnswerModal() {
     closeBtn.style.cssText = `
         background: rgba(255, 255, 255, 0.2);
         border: 1px solid rgba(255, 255, 255, 0.3);
-        font-size: 24px;
+        font-size: 20px;
         cursor: pointer;
         color: white;
         width: 36px;
@@ -248,6 +254,14 @@ function createAnswerModal() {
         justify-content: center;
         transition: all 0.3s;
     `;
+    
+    closeBtn.addEventListener('mouseenter', function() {
+        this.style.background = 'rgba(255, 255, 255, 0.4)';
+    });
+
+    closeBtn.addEventListener('mouseleave', function() {
+        this.style.background = 'rgba(255, 255, 255, 0.2)';
+    });
     
     const modalBody = modal.querySelector('.modal-body');
     modalBody.style.cssText = `
@@ -487,13 +501,13 @@ function playSuccessSound() {
 function handleTextSelection() {
     try {
         // Check if extension context is still valid before processing
-        if (!chrome || !chrome.runtime) {
+        if (typeof chrome === 'undefined' || !chrome || !chrome.runtime) {
             console.warn('Extension context invalidated, ignoring text selection');
             return;
         }
         
-        // Additional validation for chrome APIs
-        if (!chrome.storage || !chrome.storage.sync) {
+        // Additional validation for chrome APIs with more robust checking
+        if (typeof chrome.storage === 'undefined' || !chrome.storage || !chrome.storage.sync) {
             console.warn('Extension storage not available, ignoring text selection');
             return;
         }
@@ -798,9 +812,9 @@ async function getAIAnswer(text) {
     
     currentSelection = cleanText;
     
-    // Load API key from storage or file
-    let apiKey = settings.apiKey;
-    if (!apiKey) {
+    // Load NVIDIA API key from storage
+    let nvidiaApiKey = settings.nvidiaApiKey;
+    if (!nvidiaApiKey) {
         // Check extension context before trying to get API key
         if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
             console.warn('Extension context invalidated, cannot get API key');
@@ -808,33 +822,33 @@ async function getAIAnswer(text) {
             return;
         }
         
-        // Try to get API key from background script (most reliable)
+        // Try to get NVIDIA API key from background script (most reliable)
         try {
             const result = await chrome.runtime.sendMessage({
-                action: 'getApiKey'
+                action: 'getNvidiaApiKey'
             });
-            if (result && result.apiKey) {
-                apiKey = result.apiKey;
+            if (result && result.nvidiaApiKey) {
+                nvidiaApiKey = result.nvidiaApiKey;
             }
         } catch (error) {
-            console.error('Failed to get API key from background:', error);
+            console.error('Failed to get NVIDIA API key from background:', error);
         }
     }
     
-    // If still no API key, try reloading settings from storage
-    if (!apiKey) {
+    // If still no NVIDIA API key, try reloading settings from storage
+    if (!nvidiaApiKey) {
         try {
-            const result = await chrome.storage.sync.get(['apiKey']);
-            if (result && result.apiKey) {
-                apiKey = result.apiKey;
+            const result = await chrome.storage.sync.get(['nvidiaApiKey']);
+            if (result && result.nvidiaApiKey) {
+                nvidiaApiKey = result.nvidiaApiKey;
             }
         } catch (error) {
             console.error('Failed to reload settings:', error);
         }
     }
     
-    if (!apiKey) {
-        alert('Please enter your OpenRouter API key in the extension settings.');
+    if (!nvidiaApiKey) {
+        alert('Please enter your NVIDIA NIM API key in the extension settings.');
         return;
     }
     
@@ -850,7 +864,7 @@ async function getAIAnswer(text) {
     
     // Set model badge
     if (modelBadge) {
-        const modelName = getModelDisplayName(settings.model || 'amazon/nova-2-lite-v1:free');
+        const modelName = getModelDisplayName(settings.model || 'meta/llama-4-scout-17b-16e-instruct');
         modelBadge.textContent = `Model: ${modelName}`;
     }
     
@@ -936,7 +950,7 @@ async function getAIAnswer(text) {
         prompt: prompt,
         model: settings.model || 'amazon/nova-2-lite-v1:free',
         temperature: settings.temperature || 0.8,  // Slightly higher for more creativity
-        maxTokens: settings.maxTokens || 4000      // Increased tokens for detailed responses
+        maxTokens: settings.maxTokens || 16000     // Maximum tokens for truly unlimited responses
     }, function(response) {
         clearTimeout(requestTimeout);
         isProcessing = false;
@@ -984,7 +998,7 @@ async function getAIAnswer(text) {
                     prompt: enhancedPrompt,
                     model: settings.model || 'amazon/nova-2-lite-v1:free',
                     temperature: Math.min((settings.temperature || 0.8) + 0.2, 1.0), // Slightly higher temperature for more detail
-                    maxTokens: settings.maxTokens || 5000  // Even more tokens for enhanced detail
+                    maxTokens: settings.maxTokens || 20000  // Maximum tokens for unlimited enhanced detail
                 }, function(enhancedResponse) {
                     if (enhancedResponse && enhancedResponse.success) {
                         const enhancedAnswerText = enhancedResponse.answer || '';

@@ -19,23 +19,23 @@
         </div>
 
         <div class="form-group">
-            <label for="apiKey">OpenRouter API Key</label>
-            <input type="password" id="apiKey" placeholder="Enter your free OpenRouter API key">
-            <small class="helper-text">Get a free API key from openrouter.ai</small>
+            <label for="nvidiaApiKey">NVIDIA NIM API Key (Primary)</label>
+            <input type="password" id="nvidiaApiKey" placeholder="Enter your NVIDIA API key (required)">
+            <small class="helper-text">Required: Get your NVIDIA API key from build.nvidia.com</small>
         </div>
 
         <div class="form-group">
-            <label for="nvidiaApiKey">NVIDIA NIM API Key (Optional)</label>
-            <input type="password" id="nvidiaApiKey" placeholder="Enter your NVIDIA API key for fallback support">
-            <small class="helper-text">Optional: Enter NVIDIA API key for fallback when OpenRouter reaches daily limit (429 error)</small>
+            <label for="apiKey">OpenRouter API Key (Fallback)</label>
+            <input type="password" id="apiKey" placeholder="Optional: Enter OpenRouter API key for fallback support">
+            <small class="helper-text">Optional: Enter OpenRouter API key as fallback when NVIDIA NIM is unavailable</small>
         </div>
 
         <div class="form-group">
-            <label for="model">AI Model</label>
+            <label for="model">NVIDIA NIM Model</label>
             <select id="model">
-                <option value="">Loading free models...</option>
+                <option value="">Loading NVIDIA NIM models...</option>
             </select>
-            <small class="helper-text">All models are completely free to use</small>
+            <small class="helper-text">Choose from available NVIDIA NIM models</small>
         </div>
 
         <div class="form-group">
@@ -90,8 +90,8 @@
             
             <h3>💡 Tips:</h3>
             <ul>
-                <li>Connection test automatically fetches available models</li>
-                <li>Models are updated in real-time when you enter your API key</li>
+                <li>NVIDIA NIM models are pre-configured and ready to use</li>
+                <li>OpenRouter API key is optional for fallback support</li>
                 <li>Works seamlessly with Google Docs, Gmail, and other Google Workspace apps</li>
                 <li>Non-intrusive design that doesn't block your content</li>
             </ul>

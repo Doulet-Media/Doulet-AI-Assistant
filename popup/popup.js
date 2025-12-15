@@ -21,24 +21,17 @@ document.addEventListener('DOMContentLoaded', function() {
         'temperature',
         'maxTokens',
         'autoAnswer',
-        'freeModels'
+        'nvidiaModels'
     ], async function(result) {
-        // Load API key from storage only (no file loading)
-        let apiKey = result.apiKey;
-        
-        // Always set the API key in the input field if available
-        if (apiKey) {
-            apiKeyInput.value = apiKey;
-            // Check connection status
-            checkConnectionStatus(apiKey);
-        } else {
-            // Show API key input if not auto-loaded
-            showStatus('Please enter your API key', 'disconnected');
-        }
-        
         // Load NVIDIA API key
         if (result.nvidiaApiKey) {
             nvidiaApiKeyInput.value = result.nvidiaApiKey;
+        }
+        
+        // Load OpenRouter API key
+        let apiKey = result.apiKey;
+        if (apiKey) {
+            apiKeyInput.value = apiKey;
         }
         
         if (result.model) modelSelect.value = result.model;
@@ -53,17 +46,30 @@ document.addEventListener('DOMContentLoaded', function() {
             autoAnswerCheckbox.checked = result.autoAnswer;
         }
         
-        // Load free models
-        if (result.freeModels && result.freeModels.length > 0) {
-            populateModelSelect(result.freeModels, result.model);
+        // Load NVIDIA models
+        const nvidiaModels = [
+            'meta/llama-3.3-70b-instruct',
+            'meta/llama-4-maverick-17b-128e-instruct',
+            'meta/llama-4-scout-17b-16e-instruct',
+            'deepseek-ai/deepseek-r1',
+            'qwen/qwen2.5-coder-32b-instruct'
+        ];
+        
+        if (result.nvidiaModels && result.nvidiaModels.length > 0) {
+            populateModelSelect(result.nvidiaModels, result.model);
         } else {
-            // Fetch free models if not available
-            fetchFreeModels().then(models => {
-                if (models.length > 0) {
-                    populateModelSelect(models, result.model);
-                    chrome.storage.sync.set({ freeModels: models });
-                }
-            });
+            // Use predefined NVIDIA models
+            populateModelSelect(nvidiaModels, result.model);
+            chrome.storage.sync.set({ nvidiaModels: nvidiaModels });
+        }
+
+        // Update status to reflect primary and fallback API usage
+        if (result.nvidiaApiKey) {
+            showStatus('NVIDIA NIM API is set as primary', 'connected');
+        } else if (result.apiKey) {
+            showStatus('OpenRouter API is set as fallback', 'connected');
+        } else {
+            showStatus('Please enter NVIDIA NIM API key (primary). OpenRouter API key is optional.', 'disconnected');
         }
     });
 
@@ -124,39 +130,69 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Test connection
     testBtn.addEventListener('click', function() {
+        const nvidiaApiKey = nvidiaApiKeyInput.value.trim();
         const apiKey = apiKeyInput.value.trim();
-        if (!apiKey) {
-            showStatus('Please enter an API key first', 'disconnected');
-            return;
-        }
-
-        // First, validate the API key format locally
-        if (!apiKey.startsWith('sk-') && !apiKey.startsWith('or-')) {
-            showStatus('Invalid API key format', 'disconnected');
-            return;
-        }
-
-        // If format is valid, show immediate success
-        showStatus('API key format is valid ✓', 'connected');
         
-        // Still try the network test in the background, but don't show timeout
-        testConnection(apiKey, function(result) {
-            if (result && result.success) {
-                if (result.message) {
-                    showStatus(result.message, 'connected');
-                } else {
-                    showStatus('Connected to OpenRouter ✓', 'connected');
-                }
-                // Fetch free models after successful connection
-                fetchAndPopulateModels(apiKey);
-            } else {
-                // Don't change the status if network test fails - format is still valid
-                if (!result || !result.success) {
-                    // Keep the "format is valid" message
-                    showStatus('API key format is valid ✓', 'connected');
-                }
+        // Test NVIDIA NIM API first (primary)
+        if (nvidiaApiKey) {
+            // First, validate the NVIDIA API key format locally
+            // NVIDIA API keys typically start with "nvapi-" followed by a long alphanumeric string
+            if (!nvidiaApiKey.startsWith('nvapi-')) {
+                showStatus('Invalid NVIDIA API key format', 'disconnected');
+                return;
             }
-        });
+
+            // If format is valid, show immediate success
+            showStatus('NVIDIA API key format is valid ✓', 'connected');
+            
+            // Test NVIDIA NIM connection
+            testNvidiaConnection(nvidiaApiKey, function(result) {
+                if (result && result.success) {
+                    if (result.message) {
+                        showStatus(result.message, 'connected');
+                    } else {
+                        showStatus('Connected to NVIDIA NIM ✓', 'connected');
+                    }
+                } else {
+                    // Don't change the status if network test fails - format is still valid
+                    if (!result || !result.success) {
+                        // Keep the "format is valid" message
+                        showStatus('NVIDIA API key format is valid ✓', 'connected');
+                    }
+                }
+            });
+        } else if (apiKey) {
+            // Test OpenRouter API as fallback (optional)
+            // First, validate the API key format locally
+            if (!apiKey.startsWith('sk-') && !apiKey.startsWith('or-')) {
+                showStatus('Invalid API key format', 'disconnected');
+                return;
+            }
+
+            // If format is valid, show immediate success
+            showStatus('OpenRouter API key format is valid ✓', 'connected');
+            
+            // Still try the network test in the background, but don't show timeout
+            testConnection(apiKey, function(result) {
+                if (result && result.success) {
+                    if (result.message) {
+                        showStatus(result.message, 'connected');
+                    } else {
+                        showStatus('OpenRouter connection successful ✓', 'connected');
+                    }
+                    // Fetch free models after successful connection
+                    fetchAndPopulateModels(apiKey);
+                } else {
+                    // Don't change the status if network test fails - format is still valid
+                    if (!result || !result.success) {
+                        // Keep the "format is valid" message
+                        showStatus('OpenRouter API key format is valid ✓', 'connected');
+                    }
+                }
+            });
+        } else {
+            showStatus('Please enter NVIDIA NIM API key (primary). OpenRouter API key is optional.', 'disconnected');
+        }
     });
 
     // Check connection status
@@ -201,9 +237,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Test connection function
+    // Test connection function for OpenRouter
     function testConnection(apiKey, callback) {
-        showStatus('Testing connection...', 'connected');
+        showStatus('Testing OpenRouter connection...', 'connected');
         
         chrome.runtime.sendMessage({
             action: 'testConnection',
@@ -213,9 +249,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 callback(response);
             } else {
                 if (response && response.success) {
-                    showStatus('Connection successful!', 'connected');
+                    showStatus('OpenRouter connection successful!', 'connected');
                 } else {
-                    showStatus('Connection failed - check your API key', 'disconnected');
+                    showStatus('OpenRouter connection failed - check your API key', 'disconnected');
+                }
+            }
+        });
+    }
+
+    // Test NVIDIA NIM connection function
+    function testNvidiaConnection(nvidiaApiKey, callback) {
+        showStatus('Testing NVIDIA NIM connection...', 'connected');
+        
+        chrome.runtime.sendMessage({
+            action: 'testNvidiaConnection',
+            nvidiaApiKey: nvidiaApiKey
+        }, function(response) {
+            if (callback) {
+                callback(response);
+            } else {
+                if (response && response.success) {
+                    showStatus('NVIDIA NIM connection successful!', 'connected');
+                } else {
+                    showStatus('NVIDIA NIM connection failed - check your API key', 'disconnected');
                 }
             }
         });
@@ -227,25 +283,30 @@ document.addEventListener('DOMContentLoaded', function() {
         statusIndicator.className = 'status-indicator ' + status;
     }
 
-    // Fetch and populate models from background script
+    // Fetch and populate NVIDIA NIM models
     async function fetchAndPopulateModels(apiKey) {
         try {
-            showStatus('Fetching available models...', 'connected');
+            showStatus('Loading NVIDIA NIM models...', 'connected');
             
-            const result = await chrome.runtime.sendMessage({
-                action: 'fetchFreeModels'
-            });
+            // For NVIDIA NIM, we use the predefined list of available models
+            const nvidiaModels = [
+                'meta/llama-3.3-70b-instruct',
+                'meta/llama-4-maverick-17b-128e-instruct',
+                'meta/llama-4-scout-17b-16e-instruct',
+                'deepseek-ai/deepseek-r1',
+                'qwen/qwen2.5-coder-32b-instruct'
+            ];
             
-            if (result.success && result.models && result.models.length > 0) {
-                populateModelSelect(result.models, modelSelect.value);
-                chrome.storage.sync.set({ freeModels: result.models });
-                showStatus(`Found ${result.models.length} free models ✓`, 'connected');
+            if (nvidiaModels.length > 0) {
+                populateModelSelect(nvidiaModels, modelSelect.value);
+                chrome.storage.sync.set({ nvidiaModels: nvidiaModels });
+                showStatus(`Loaded ${nvidiaModels.length} NVIDIA NIM models ✓`, 'connected');
             } else {
-                showStatus('Failed to fetch models', 'disconnected');
+                showStatus('Failed to load NVIDIA NIM models', 'disconnected');
             }
         } catch (error) {
-            console.error('Failed to fetch models:', error);
-            showStatus('Failed to fetch models', 'disconnected');
+            console.error('Failed to load NVIDIA NIM models:', error);
+            showStatus('Failed to load NVIDIA NIM models', 'disconnected');
         }
     }
 
@@ -311,29 +372,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Get display name for model
+    // Get display name for NVIDIA NIM model
     function getModelDisplayName(modelId) {
         const modelNames = {
-            'amazon/nova-2-lite-v1:free': 'Amazon Nova 2 Lite (Free)',
-            'amazon/nova-2': 'Amazon Nova 2',
-            'anthropic/claude-3.5-sonnet': 'Claude 3.5 Sonnet',
-            'anthropic/claude-3-haiku': 'Claude 3 Haiku',
-            'anthropic/claude-3-sonnet': 'Claude 3 Sonnet',
-            'anthropic/claude-3-opus': 'Claude 3 Opus',
-            'openai/gpt-3.5-turbo': 'GPT-3.5 Turbo',
-            'openai/gpt-4': 'GPT-4',
-            'openai/gpt-4-turbo': 'GPT-4 Turbo',
-            'google/gemini-pro': 'Gemini Pro',
-            'google/gemini-flash': 'Gemini Flash',
-            'google/gemini-ultra': 'Gemini Ultra',
-            'meta-llama/llama-3-8b': 'Llama 3 8B',
-            'meta-llama/llama-3-70b': 'Llama 3 70B',
-            'meta-llama/llama-3.1-8b': 'Llama 3.1 8B',
-            'meta-llama/llama-3.1-70b': 'Llama 3.1 70B',
-            'mistralai/mistral-small': 'Mistral Small',
-            'mistralai/mistral-large': 'Mistral Large',
-            'cohere/command-r': 'Command R',
-            'cohere/command-r-plus': 'Command R+'
+            'meta/llama-3.3-70b-instruct': 'Meta Llama 3.3 70B Instruct',
+            'meta/llama-4-maverick-17b-128e-instruct': 'Meta Llama 4 Maverick 17B Instruct',
+            'meta/llama-4-scout-17b-16e-instruct': 'Meta Llama 4 Scout 17B Instruct',
+            'deepseek-ai/deepseek-r1': 'DeepSeek R1',
+            'qwen/qwen2.5-coder-32b-instruct': 'Qwen 2.5 Coder 32B Instruct'
         };
         
         return modelNames[modelId] || modelId;
@@ -356,17 +402,22 @@ document.addEventListener('DOMContentLoaded', function() {
     // Refresh models list when popup opens
     async function refreshModelsList() {
         try {
-            const result = await chrome.runtime.sendMessage({
-                action: 'fetchFreeModels'
-            });
+            // For NVIDIA NIM, we use the predefined list of available models
+            const nvidiaModels = [
+                'meta/llama-3.3-70b-instruct',
+                'meta/llama-4-maverick-17b-128e-instruct',
+                'meta/llama-4-scout-17b-16e-instruct',
+                'deepseek-ai/deepseek-r1',
+                'qwen/qwen2.5-coder-32b-instruct'
+            ];
             
-            if (result.success && result.models && result.models.length > 0) {
-                populateModelSelect(result.models, modelSelect.value);
-                chrome.storage.sync.set({ freeModels: result.models });
-                console.log('Models refreshed in popup:', result.models.length);
+            if (nvidiaModels.length > 0) {
+                populateModelSelect(nvidiaModels, modelSelect.value);
+                chrome.storage.sync.set({ nvidiaModels: nvidiaModels });
+                console.log('NVIDIA NIM models loaded in popup:', nvidiaModels.length);
             }
         } catch (error) {
-            console.error('Failed to refresh models in popup:', error);
+            console.error('Failed to load NVIDIA NIM models in popup:', error);
         }
     }
 

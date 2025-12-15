@@ -33,6 +33,17 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 sendResponse({ apiKey: result.apiKey || '' });
             });
             return true; // Keep message channel open for async response
+        } else if (request.action === 'getNvidiaApiKey') {
+            // Return NVIDIA API key from storage
+            chrome.storage.sync.get(['nvidiaApiKey'], function(result) {
+                if (chrome.runtime.lastError) {
+                    console.error('Storage error:', chrome.runtime.lastError);
+                    sendResponse({ nvidiaApiKey: '' });
+                    return;
+                }
+                sendResponse({ nvidiaApiKey: result.nvidiaApiKey || '' });
+            });
+            return true; // Keep message channel open for async response
         } else if (request.action === 'fetchFreeModels') {
             // Fetch and return free models list
             updateFreeModelsList().then(models => {
@@ -62,14 +73,14 @@ async function getAIAnswer(request, sendResponse) {
     const { text, prompt, model, temperature, maxTokens } = request;
     
     try {
-        // Get API key from storage
-        let result = await chrome.storage.sync.get(['apiKey']);
-        let apiKey = result.apiKey;
+        // Get NVIDIA API key from storage
+        let result = await chrome.storage.sync.get(['nvidiaApiKey']);
+        let nvidiaApiKey = result.nvidiaApiKey;
         
-        if (!apiKey) {
+        if (!nvidiaApiKey) {
             sendResponse({
                 success: false,
-                error: 'No API key found. Please enter your OpenRouter API key in the extension settings.'
+                error: 'No NVIDIA API key found. Please enter your NVIDIA NIM API key in the extension settings.'
             });
             return;
         }
@@ -85,7 +96,42 @@ async function getAIAnswer(request, sendResponse) {
         }, timeout);
         
         try {
-            // Prepare request to OpenRouter with correct API format
+            // Primary: NVIDIA NIM API
+            const nvidiaResult = await chrome.storage.sync.get(['nvidiaApiKey']);
+            const nvidiaApiKey = nvidiaResult.nvidiaApiKey;
+
+            if (nvidiaApiKey) {
+                const nvidiaResponse = await getAnswerFromNvidiaNim({
+                    text, prompt, temperature, maxTokens: maxTokens || 3000
+                }, nvidiaApiKey, controller.signal);
+
+                if (nvidiaResponse.success) {
+                    sendResponse({
+                        success: true,
+                        answer: nvidiaResponse.answer,
+                        model: nvidiaResponse.model,
+                        tokens_used: nvidiaResponse.tokens_used || 0
+                    });
+                    return;
+                } else {
+                    console.error('NVIDIA NIM primary failed:', nvidiaResponse.error);
+                }
+            } else {
+                console.warn('No NVIDIA API key available. Falling back to OpenRouter.');
+            }
+
+            // Fallback: OpenRouter API
+            const result = await chrome.storage.sync.get(['apiKey']);
+            const apiKey = result.apiKey;
+
+            if (!apiKey) {
+                sendResponse({
+                    success: false,
+                    error: 'No OpenRouter API key found. Please enter your OpenRouter API key in the extension settings for fallback support.'
+                });
+                return;
+            }
+
             const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -103,121 +149,37 @@ async function getAIAnswer(request, sendResponse) {
                             content: prompt
                         }
                     ],
-                    temperature: temperature || 0.8,    // Slightly higher for creativity
-                    max_tokens: maxTokens || 4000,      // Increased for detailed responses
+                    temperature: temperature || 0.8,
+                    max_tokens: maxTokens || 4000,
                     stream: false
                 }),
                 signal: controller.signal
             });
-            
-            clearTimeout(timeoutId);
-            
+
             if (!response.ok) {
                 const errorText = await response.text();
-                
-                // Check if it's a rate limit error (429)
-                if (response.status === 429) {
-                    console.log('OpenRouter rate limit reached, trying NVIDIA NIM...');
-                    
-                    // Try NVIDIA NIM API as fallback
-                    try {
-                        const nvidiaResult = await chrome.storage.sync.get(['nvidiaApiKey']);
-                        const nvidiaApiKey = nvidiaResult.nvidiaApiKey;
-                        
-                        if (nvidiaApiKey) {
-                            const nvidiaResponse = await getAnswerFromNvidiaNim({
-                                text, prompt, temperature, maxTokens
-                            }, nvidiaApiKey, controller.signal);
-                            
-                            if (nvidiaResponse.success) {
-                                sendResponse({
-                                    success: true,
-                                    answer: nvidiaResponse.answer,
-                                    model: nvidiaResponse.model,
-                                    tokens_used: nvidiaResponse.tokens_used,
-                                    fallback: true
-                                });
-                                return;
-                            } else {
-                                sendResponse({
-                                    success: false,
-                                    error: `NVIDIA NIM fallback failed: ${nvidiaResponse.error}. OpenRouter daily limit reached.`
-                                });
-                                return;
-                            }
-                        } else {
-                            sendResponse({
-                                success: false,
-                                error: `OpenRouter daily limit reached (429). Please enter a NVIDIA API key in settings for fallback support.`
-                            });
-                            return;
-                        }
-                    } catch (nvidiaError) {
-                        sendResponse({
-                            success: false,
-                            error: `NVIDIA NIM fallback failed: ${nvidiaError.message}. OpenRouter daily limit reached.`
-                        });
-                        return;
-                    }
-                }
-                
-                throw new Error(`HTTP error! Status: ${response.status} - ${errorText}`);
+                throw new Error(`OpenRouter API error! Status: ${response.status} - ${errorText}`);
             }
-            
+
             const data = await response.json();
-            
+
             if (data && data.choices && data.choices.length > 0) {
                 const answer = data.choices[0].message.content;
                 sendResponse({
                     success: true,
-                    answer: answer
+                    answer: answer,
+                    model: model,
+                    tokens_used: data.usage?.total_tokens || 0
                 });
             } else {
-                console.log('OpenRouter returned an empty response, trying NVIDIA NIM...');
-                const nvidiaResult = await chrome.storage.sync.get(['nvidiaApiKey']);
-                const nvidiaApiKey = nvidiaResult.nvidiaApiKey;
-
-                if (nvidiaApiKey) {
-                    const nvidiaResponse = await getAnswerFromNvidiaNim({
-                        text, prompt, temperature, maxTokens
-                    }, nvidiaApiKey, controller.signal);
-
-                    if (nvidiaResponse.success) {
-                        sendResponse({
-                            success: true,
-                            answer: nvidiaResponse.answer,
-                            model: nvidiaResponse.model,
-                            tokens_used: nvidiaResponse.tokens_used,
-                            fallback: true
-                        });
-                        return;
-                    } else {
-                        sendResponse({
-                            success: false,
-                            error: `NVIDIA NIM fallback failed: ${nvidiaResponse.error}. OpenRouter returned an empty response.`
-                        });
-                        return;
-                    }
-                } else {
-                    sendResponse({
-                        success: false,
-                        error: 'OpenRouter returned an empty response. Please enter a NVIDIA API key in settings for fallback support.'
-                    });
-                    return;
-                }
+                throw new Error('Invalid response from OpenRouter API: No choices returned');
             }
-            
         } catch (error) {
-            clearTimeout(timeoutId);
-            
-            if (error.name === 'AbortError') {
-                sendResponse({
-                    success: false,
-                    error: `Request timed out after ${(timeout / 1000)} seconds. Please try again or increase the timeout in settings.`
-                });
-            } else {
-                throw error;
-            }
+            console.error('Error in primary and fallback logic:', error);
+            sendResponse({
+                success: false,
+                error: error.message || 'Failed to get answer from NVIDIA NIM or OpenRouter'
+            });
         }
         
     } catch (error) {
@@ -249,8 +211,8 @@ async function getAnswerFromNvidiaNim(request, nvidiaApiKey, signal) {
                         content: prompt
                     }
                 ],
-                max_tokens: maxTokens || 512,      // Default to 512 tokens
-                temperature: temperature || 1.0,   // Default to 1.0 for creativity
+                max_tokens: maxTokens || 3000,     // Increased for detailed responses
+                temperature: temperature || 0.8,   // Default to 0.8 for balanced creativity
                 top_p: 1.0,                        // Default to 1.0 for full distribution
                 frequency_penalty: 0.0,            // Default to no penalty
                 presence_penalty: 0.0,             // Default to no penalty
@@ -310,13 +272,14 @@ async function getDetailedAnswer(request, sendResponse) {
     const { text, prompt, model, temperature, maxTokens } = request;
     
     try {
-        let result = await chrome.storage.sync.get(['apiKey']);
-        let apiKey = result.apiKey;
+        // Get NVIDIA API key from storage
+        let result = await chrome.storage.sync.get(['nvidiaApiKey']);
+        let nvidiaApiKey = result.nvidiaApiKey;
         
-        if (!apiKey) {
+        if (!nvidiaApiKey) {
             sendResponse({
                 success: false,
-                error: 'No API key found. Please enter your OpenRouter API key in the extension settings.'
+                error: 'No NVIDIA API key found. Please enter your NVIDIA NIM API key in the extension settings.'
             });
             return;
         }
@@ -330,6 +293,32 @@ async function getDetailedAnswer(request, sendResponse) {
         }, timeout);
         
         try {
+            // Primary: NVIDIA NIM API
+            const nvidiaResult = await chrome.storage.sync.get(['nvidiaApiKey']);
+            const nvidiaApiKey = nvidiaResult.nvidiaApiKey;
+
+            if (nvidiaApiKey) {
+                const nvidiaResponse = await getAnswerFromNvidiaNim({
+                    text, prompt, temperature, maxTokens: maxTokens || 3000
+                }, nvidiaApiKey, controller.signal);
+
+                if (nvidiaResponse.success) {
+                    sendResponse({
+                        success: true,
+                        answer: nvidiaResponse.answer,
+                        model: nvidiaResponse.model,
+                        tokens_used: nvidiaResponse.tokens_used || 0,
+                        enhanced: false
+                    });
+                    return;
+                } else {
+                    console.error('NVIDIA NIM primary failed:', nvidiaResponse.error);
+                }
+            } else {
+                console.warn('No NVIDIA API key available. Falling back to OpenRouter.');
+            }
+
+            // Fallback: OpenRouter API
             const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -367,55 +356,7 @@ async function getDetailedAnswer(request, sendResponse) {
             
             if (!response.ok) {
                 const errorText = await response.text();
-                
-                // Check if it's a rate limit error (429)
-                if (response.status === 429) {
-                    console.log('OpenRouter rate limit reached, trying NVIDIA NIM...');
-                    
-                    // Try NVIDIA NIM API as fallback
-                    try {
-                        const nvidiaResult = await chrome.storage.sync.get(['nvidiaApiKey']);
-                        const nvidiaApiKey = nvidiaResult.nvidiaApiKey;
-                        
-                        if (nvidiaApiKey) {
-                            const nvidiaResponse = await getAnswerFromNvidiaNim({
-                                text, prompt, temperature, maxTokens: maxTokens || 3000
-                            }, nvidiaApiKey, controller.signal);
-                            
-                            if (nvidiaResponse.success) {
-                                sendResponse({
-                                    success: true,
-                                    answer: nvidiaResponse.answer,
-                                    model: nvidiaResponse.model,
-                                    tokens_used: nvidiaResponse.tokens_used || 0,
-                                    enhanced: false,
-                                    fallback: true
-                                });
-                                return;
-                            } else {
-                                sendResponse({
-                                    success: false,
-                                    error: `NVIDIA NIM fallback failed: ${nvidiaResponse.error}. OpenRouter daily limit reached.`
-                                });
-                                return;
-                            }
-                        } else {
-                            sendResponse({
-                                success: false,
-                                error: `OpenRouter daily limit reached (429). Please enter a NVIDIA API key in settings for fallback support.`
-                            });
-                            return;
-                        }
-                    } catch (nvidiaError) {
-                        sendResponse({
-                            success: false,
-                            error: `NVIDIA NIM fallback failed: ${nvidiaError.message}. OpenRouter daily limit reached.`
-                        });
-                        return;
-                    }
-                }
-                
-                throw new Error(`HTTP error! Status: ${response.status} - ${errorText}`);
+                throw new Error(`OpenRouter API error! Status: ${response.status} - ${errorText}`);
             }
             
             const data = await response.json();
@@ -621,12 +562,49 @@ async function testConnection(apiKey, sendResponse) {
     }
 }
 
+// Test connection to NVIDIA NIM
+async function testNvidiaConnection(nvidiaApiKey, sendResponse) {
+    try {
+        // Simple API key validation - just check if it's a valid format
+        if (!nvidiaApiKey || nvidiaApiKey.trim().length === 0) {
+            sendResponse({ success: false, error: 'NVIDIA API key is required' });
+            return;
+        }
+
+        // Basic NVIDIA API key format validation
+        // NVIDIA API keys typically start with "nvapi-" followed by a long alphanumeric string
+        if (!nvidiaApiKey.startsWith('nvapi-')) {
+            sendResponse({ success: false, error: 'Invalid NVIDIA API key format. Should start with "nvapi-"' });
+            return;
+        }
+
+        // For connection testing, we'll ONLY do local validation
+        // No network calls to avoid timeout issues
+        // The real connection will be tested when the user actually requests an answer
+        
+        sendResponse({
+            success: true,
+            message: 'NVIDIA API key format is valid ✓. Connection will be tested when you request an answer.'
+        });
+        
+    } catch (error) {
+        console.error('NVIDIA connection test failed:', error);
+        sendResponse({ success: false, error: error.message || 'NVIDIA connection test failed' });
+    }
+}
+
 // Handle extension installation
 chrome.runtime.onInstalled.addListener(async function(details) {
     if (details.reason === 'install') {
-        // Get free models and set default
-        const freeModels = await updateFreeModelsList();
-        const defaultModel = freeModels.length > 0 ? freeModels[0] : 'amazon/nova-2-lite-v1:free';
+        // Get NVIDIA NIM models and set default
+        const nvidiaModels = [
+            'meta/llama-3.3-70b-instruct',
+            'meta/llama-4-maverick-17b-128e-instruct',
+            'meta/llama-4-scout-17b-16e-instruct',
+            'deepseek-ai/deepseek-r1',
+            'qwen/qwen2.5-coder-32b-instruct'
+        ];
+        const defaultModel = nvidiaModels[0]; // Default to meta/llama-4-scout-17b-16e-instruct
         
         // Show welcome message - NO API KEY LOADED FROM FILE
         try {
@@ -644,7 +622,7 @@ chrome.runtime.onInstalled.addListener(async function(details) {
                 anonymousMode: false,
                 customPrompt: '',
                 timeout: 30,
-                freeModels: freeModels
+                nvidiaModels: nvidiaModels
                 // NO apiKey field - users must enter it manually
             });
         } catch (error) {
@@ -699,6 +677,9 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
             return true;
         } else if (request.action === 'testConnection') {
             testConnection(request.apiKey, sendResponse);
+            return true;
+        } else if (request.action === 'testNvidiaConnection') {
+            testNvidiaConnection(request.nvidiaApiKey, sendResponse);
             return true;
         } else if (request.action === 'getApiKey') {
             chrome.storage.sync.get(['apiKey'], function(result) {

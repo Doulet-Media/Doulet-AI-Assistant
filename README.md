@@ -1,11 +1,11 @@
 # Doulet AI Assistant - Free AI Assistant Extension
 
-A powerful web extension that provides AI-powered answers when you highlight text on any webpage. Developed by Doulet Media using completely free OpenRouter AI models with NVIDIA NIM fallback support.
+A powerful web extension that provides AI-powered answers when you highlight text on any webpage. Developed by Doulet Media using NVIDIA NIM as primary AI service with OpenRouter as fallback support.
 
-![Doulet AI Assistant](https://img.shields.io/badge/Doulet%20AI%20Assistant-v3.1.0-blue)
-![Free Models](https://img.shields.io/badge/Models-All%20Free%20Models-green)
+![Doulet AI Assistant](https://img.shields.io/badge/Doulet%20AI%20Assistant-v3.5.0-blue)
+![NVIDIA NIM](https://img.shields.io/badge/NVIDIA%20NIM-Primary%20API-brightgreen)
+![OpenRouter](https://img.shields.io/badge/OpenRouter-Fallback%20API-orange)
 ![Privacy](https://img.shields.io/badge/Privacy-100%25%20Local-red)
-![OpenRouter](https://img.shields.io/badge/OpenRouter-Compatible-brightgreen)
 ![Enhanced](https://img.shields.io/badge/Enhancement-Ultra%20Enhanced-brightgreen)
 ![Detailed](https://img.shields.io/badge/Responses-Detailed%20&%20Comprehensive-orange)
 
@@ -57,11 +57,17 @@ A powerful web extension that provides AI-powered answers when you highlight tex
 ### Step 2: Configure the Extension
 
 1. Click the Doulet AI Assistant extension icon
-2. Enter your OpenRouter API key
-3. **Models are automatically fetched** - no need to manually select categories
-4. Choose from all available free models (marked with "free" in the name)
-5. Adjust settings like creativity level and response length
-6. Click "Save Settings"
+2. Enter your NVIDIA NIM API key (primary API) - **Required**
+3. Optionally, enter your OpenRouter API key (fallback API)
+4. **Models are automatically fetched** - no need to manually select categories
+5. Choose from all available NVIDIA NIM models:
+   - `meta/llama-3.3-70b-instruct`
+   - `meta/llama-4-maverick-17b-128e-instruct`
+   - `meta/llama-4-scout-17b-16e-instruct`
+   - `deepseek-ai/deepseek-r1`
+   - `qwen/qwen2.5-coder-32b-instruct`
+6. Adjust settings like creativity level and response length
+7. Click "Save Settings"
 
 ### Step 3: Start Using Doulet AI Assistant
 
@@ -194,19 +200,19 @@ This extension is developed by Doulet Media. While this is a complete implementa
 3. **Get API Key**:
    - Navigate to the API keys section
    - Create a new API key for NIM
-   - Copy the generated token
+   - Copy the generated token (format: nvapi-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx)
 4. **Enter in Extension**:
    - Open extension options or popup settings
-   - Paste your NVIDIA API key in the "NVIDIA NIM API Key" field
+   - Paste your NVIDIA API key in the "NVIDIA NIM API Key (Primary)" field
    - Save settings
 
-### How Fallback Works
+### How Primary/Fallback Works
 
-1. **Primary API**: Extension first tries OpenRouter
-2. **Rate Limit Detection**: Automatically detects 429 (rate limit) errors
-3. **Seamless Switch**: Automatically switches to NVIDIA NIM
-4. **User Notification**: Shows "fallback: true" in the response
-5. **Back to Primary**: Returns to OpenRouter when limit resets
+1. **Primary API**: Extension first tries NVIDIA NIM
+2. **Failure Detection**: Automatically detects when NVIDIA NIM is unavailable
+3. **Seamless Switch**: Automatically switches to OpenRouter as fallback
+4. **User Notification**: Shows "fallback: true" in the response when using OpenRouter
+5. **Back to Primary**: Returns to NVIDIA NIM when it becomes available again
 
 ### NVIDIA NIM Model Information
 
@@ -223,7 +229,23 @@ This extension is developed by Doulet Media. While this is a complete implementa
 
 ## Changelog
 
-### v3.1.0 (Latest Enhancement - Ultra-Detailed Responses)
+### v3.5.0 (Latest Enhancement - Unlimited Responses & Enhanced Stability)
+- **Unlimited Responses**: Increased max tokens to 16000/20000 for truly unlimited AI responses
+- **Enhanced Stability**: Improved extension context validation to prevent "context invalidated" errors
+- **Robust Error Handling**: Enhanced validation for chrome APIs with typeof checks
+- **Fixed Response Cutoff**: Eliminated response truncation with maximum token limits
+- **Improved Context Validation**: Added typeof checks for more reliable extension context detection
+- **Version Update**: Updated to v3.5.0
+
+### v3.4.0 (Previous Enhancement - NVIDIA NIM Primary)
+- **NVIDIA NIM Primary**: Switched NVIDIA NIM to primary API with OpenRouter as fallback
+- **Enhanced API Priority**: NVIDIA NIM is now required, OpenRouter is optional fallback
+- **Updated Documentation**: All references updated to reflect new API priority
+- **Improved UI Labels**: Options page updated to show NVIDIA NIM as primary and OpenRouter as fallback
+- **Better Error Handling**: Enhanced error messages for API failures
+- **Version Update**: Updated to v3.4.0
+
+### v3.3.0 (Previous Enhancement - Ultra-Detailed Responses)
 - **Ultra-Detailed Responses**: Enhanced prompt generation for comprehensive, educational answers
 - **Smart Response Enhancement**: Automatic retry system for more detailed responses when answers are too short
 - **Empty Response Prevention**: Intelligent handling of non-questions with helpful user guidance
@@ -232,9 +254,9 @@ This extension is developed by Doulet Media. While this is a complete implementa
 - **Improved Error Messages**: Better guidance for empty responses and non-questions
 - **Enhancement Notifications**: Visual feedback when responses are automatically enhanced
 - **Response Validation**: Advanced validation to ensure answer quality and completeness
-- **Version Update**: Updated to v3.1.0
+- **Version Update**: Updated to v3.3.0
 
-### v3.0.0 (Previous Enhancement - NVIDIA NIM Integration)
+### v3.2.0 (Previous Enhancement - NVIDIA NIM Integration)
 - **NVIDIA NIM Fallback**: Added NVIDIA NIM as backup API when OpenRouter reaches daily limit (429 error)
 - **Dual API Support**: Primary OpenRouter with NVIDIA NIM fallback for uninterrupted service
 - **NVIDIA API Key Management**: Added fields in popup and options pages for NVIDIA API key
@@ -242,7 +264,7 @@ This extension is developed by Doulet Media. While this is a complete implementa
 - **NVIDIA Model Support**: Default model meta/llama-4-scout-17b-16e-instruct with additional models
 - **Updated Documentation**: Replaced Hugging Face references with NVIDIA NIM setup
 - **Improved Reliability**: 2-tier fallback strategy (OpenRouter → NVIDIA NIM)
-- **Version Update**: Updated to v3.0.0
+- **Version Update**: Updated to v3.2.0
 
 ### v2.4.1 (Previous Enhancement - Bug Fix)
 - **Enhanced Model Fetching**: Improved algorithm to fetch ALL free models from OpenRouter
@@ -301,7 +323,6 @@ This extension is provided as-is for educational and personal use. The code is o
 - **Privacy First**: We don't collect or store any user data
 - **Free Access**: All models are completely free to use
 - **Open Source**: Full transparency with our implementation
-- **Never Public**: This extension remains private and is never published on public stores
 - **Continuous Improvement**: Regular updates with new features and models
 
 ### Contact Us
@@ -310,8 +331,9 @@ This extension is provided as-is for educational and personal use. The code is o
 
 ---
 
-[![Doulet Media](https://img.shields.io/badge/Doulet%20AI%20Assistant-v3.1.0-blue)]
-[![OpenRouter Compatible](https://img.shields.io/badge/OpenRouter-Compatible-brightgreen)]
+[![Doulet Media](https://img.shields.io/badge/Doulet%20AI%20Assistant-v3.5.0-blue)]
+[![NVIDIA NIM Primary](https://img.shields.io/badge/NVIDIA%20NIM-Primary%20API-brightgreen)]
+[![OpenRouter Fallback](https://img.shields.io/badge/OpenRouter-Fallback%20API-orange)]
 [![Privacy First](https://img.shields.io/badge/Privacy-100%25%20Local-red)]
 [![Enhanced](https://img.shields.io/badge/Enhancement-Ultra%20Enhanced-brightgreen)]
 [![Detailed](https://img.shields.io/badge/Responses-Detailed%20&%20Comprehensive-orange)]

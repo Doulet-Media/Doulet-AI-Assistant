@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Doulet AI Assistant",
-  "version": "3.2.0",
-  "description": "🤖 Instant AI Question Answerer - Get direct answers to any question with unlimited output. Perfect for students.",
+  "version": "3.5.0",
+  "description": "🤖 Instant AI Question Answerer - Get direct answers to any question with unlimited output. Perfect for students. NVIDIA NIM powered with OpenRouter fallback.",
   "author": "Doulet Media",
   "action": {
     "default_popup": "popup/popup.html",
