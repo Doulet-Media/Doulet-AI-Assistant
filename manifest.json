@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Doulet AI Assistant",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "🤖 Instant AI Question Answerer - Get direct answers to any question with unlimited output. Perfect for students.",
   "author": "Doulet Media",
   "action": {
@@ -25,7 +25,6 @@
   "permissions": [
     "storage",
     "activeTab",
-    "scripting",
     "contextMenus",
     "tabs",
     "declarativeContent",

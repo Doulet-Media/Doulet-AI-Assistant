@@ -5,10 +5,10 @@ const NVIDIA_API_CONFIG = {
     endpoint: "https://integrate.api.nvidia.com/v1/chat/completions",
     defaultModel: "meta/llama-4-scout-17b-16e-instruct",
     availableModels: [
+        "meta/llama-3.3-70b-instruct",
         "meta/llama-4-maverick-17b-128e-instruct",
         "meta/llama-4-scout-17b-16e-instruct",
         "deepseek-ai/deepseek-r1",
-        "meta/llama-3.3-70b-instruct",
         "qwen/qwen2.5-coder-32b-instruct"
     ]
 };
@@ -173,7 +173,38 @@ async function getAIAnswer(request, sendResponse) {
                     answer: answer
                 });
             } else {
-                throw new Error('Invalid response from OpenRouter API: No choices returned');
+                console.log('OpenRouter returned an empty response, trying NVIDIA NIM...');
+                const nvidiaResult = await chrome.storage.sync.get(['nvidiaApiKey']);
+                const nvidiaApiKey = nvidiaResult.nvidiaApiKey;
+
+                if (nvidiaApiKey) {
+                    const nvidiaResponse = await getAnswerFromNvidiaNim({
+                        text, prompt, temperature, maxTokens
+                    }, nvidiaApiKey, controller.signal);
+
+                    if (nvidiaResponse.success) {
+                        sendResponse({
+                            success: true,
+                            answer: nvidiaResponse.answer,
+                            model: nvidiaResponse.model,
+                            tokens_used: nvidiaResponse.tokens_used,
+                            fallback: true
+                        });
+                        return;
+                    } else {
+                        sendResponse({
+                            success: false,
+                            error: `NVIDIA NIM fallback failed: ${nvidiaResponse.error}. OpenRouter returned an empty response.`
+                        });
+                        return;
+                    }
+                } else {
+                    sendResponse({
+                        success: false,
+                        error: 'OpenRouter returned an empty response. Please enter a NVIDIA API key in settings for fallback support.'
+                    });
+                    return;
+                }
             }
             
         } catch (error) {
@@ -201,13 +232,13 @@ async function getAIAnswer(request, sendResponse) {
 // Get answer from NVIDIA NIM API
 async function getAnswerFromNvidiaNim(request, nvidiaApiKey, signal) {
     try {
-        const { text, prompt, temperature, maxTokens } = request;
-        
+        const { text, prompt, temperature, maxTokens, stream = false } = request;
+
         const response = await fetch(NVIDIA_API_CONFIG.endpoint, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${nvidiaApiKey}`,
-                'Accept': 'application/json',
+                'Accept': stream ? 'text/event-stream' : 'application/json',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -218,32 +249,51 @@ async function getAnswerFromNvidiaNim(request, nvidiaApiKey, signal) {
                         content: prompt
                     }
                 ],
-                max_tokens: maxTokens || 4000,      // Increased for detailed responses
-                temperature: temperature || 0.8,    // Slightly lower for more coherent detailed responses
-                top_p: 0.95,                        // Slightly lower for more focused responses
-                frequency_penalty: 0.1,             // Slight penalty to avoid repetition
-                presence_penalty: 0.1,              // Slight penalty to encourage topic diversity
-                stream: false
+                max_tokens: maxTokens || 512,      // Default to 512 tokens
+                temperature: temperature || 1.0,   // Default to 1.0 for creativity
+                top_p: 1.0,                        // Default to 1.0 for full distribution
+                frequency_penalty: 0.0,            // Default to no penalty
+                presence_penalty: 0.0,             // Default to no penalty
+                stream: stream
             }),
             signal: signal
         });
-        
+
         if (!response.ok) {
             const errorText = await response.text();
             throw new Error(`NVIDIA NIM API error! Status: ${response.status} - ${errorText}`);
         }
-        
-        const data = await response.json();
-        
-        if (data && data.choices && data.choices.length > 0) {
+
+        if (stream) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let result = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                result += decoder.decode(value, { stream: true });
+            }
+
             return {
                 success: true,
-                answer: data.choices[0].message.content,
+                answer: result,
                 model: NVIDIA_API_CONFIG.defaultModel,
-                tokens_used: data.usage?.total_tokens || 0
+                tokens_used: 0 // Tokens used are not available in streaming mode
             };
         } else {
-            throw new Error('Invalid response from NVIDIA NIM API: No choices returned');
+            const data = await response.json();
+
+            if (data && data.choices && data.choices.length > 0) {
+                return {
+                    success: true,
+                    answer: data.choices[0].message.content,
+                    model: NVIDIA_API_CONFIG.defaultModel,
+                    tokens_used: data.usage?.total_tokens || 0
+                };
+            } else {
+                throw new Error('Invalid response from NVIDIA NIM API: No choices returned');
+            }
         }
         
     } catch (error) {

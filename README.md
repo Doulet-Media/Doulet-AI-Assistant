@@ -211,12 +211,12 @@ This extension is developed by Doulet Media. While this is a complete implementa
 ### NVIDIA NIM Model Information
 
 - **Default Model**: meta/llama-4-scout-17b-16e-instruct
-- **Available Models**:
-  - meta/llama-4-maverick-17b-128e-instruct
-  - meta/llama-4-scout-17b-16e-instruct
-  - deepseek-ai/deepseek-r1
-  - meta/llama-3.3-70b-instruct
-  - qwen/qwen2.5-coder-32b-instruct
+- **Available Models**: Choose from the following NVIDIA NIM models:
+  - `meta/llama-3.3-70b-instruct`
+  - `meta/llama-4-maverick-17b-128e-instruct`
+  - `meta/llama-4-scout-17b-16e-instruct`
+  - `deepseek-ai/deepseek-r1`
+  - `qwen/qwen2.5-coder-32b-instruct`
 - **Type**: Enterprise-grade LLMs
 - **Performance**: High-quality, fast responses
 - **Cost**: Free tier available
