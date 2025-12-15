@@ -17,7 +17,7 @@ A powerful web extension that provides AI-powered answers when you highlight tex
 - **Smart Response Enhancement**: Automatic retry for more detailed answers when needed
 - **Empty Response Prevention**: Intelligent handling of non-questions and edge cases
 - **Privacy First**: Your data stays private, no tracking or data collection
-- **Easy to Use**: Simple click or keyboard shortcut (Ctrl+Shift+A)
+- **Easy to Use**: Simple click or keyboard shortcut (Ctrl+Shift+Q)
 - **Context Menu**: Right-click selected text for quick access
 
 ### 🧠 AI Model Categories
@@ -43,13 +43,13 @@ A powerful web extension that provides AI-powered answers when you highlight tex
 4. Click "Load unpacked" and select the extension folder
 5. The Doulet AI Assistant icon should appear in your toolbar!
 
-> **Note**: This extension will noever be published on public extension stores due to privary reasons and to avoid api issues and provide best usage experiencefor users. 
+> **Note** This extension doesn't work on Google School Accounts due to board restriction. The only ways to use this is either getting it on edge and login to Google account to normally use or use on personal Google accounts.
 
 ## 🎯 Getting Started
 
 ### Step 1: Get Your Free API Key
 
-1. Visit [OpenRouter.ai](https://openrouter.ai/keys)
+1. Visit [Nvidia NIM](https://build.nvidia.com/)
 2. Sign up for a free account
 3. Navigate to the API keys section
 4. Create a new API key
@@ -93,22 +93,12 @@ The extension automatically categorizes models based on their capabilities:
 - **Coding & Development**: Specialized for programming tasks
 - **Multimodal**: Support for images and document analysis
 
-### Popular Free Models Include
-- **Amazon Nova 2 Lite** (Free tier available)
-- **Anthropic Claude models** (Free tiers)
-- **OpenAI GPT models** (Free tiers)
-- **Google Gemini models** (Free tiers)
-- **Meta Llama models** (Free tiers)
-- **Mistral models** (Free tiers)
-- **Cohere models** (Free tiers)
-- And many more...
-
 ## Settings
 
 ### Popup Settings
 Access these by clicking the extension icon:
 
-- **API Key**: Your OpenRouter API key
+- **API Key**: YourONvidia NIM API key
 - **AI Model**: Choose from all available free models (automatically fetched)
 - **Creativity Level**: Control how creative or conservative the responses are (0.0-1.0)
 - **Max Response Length**: Limit the length of AI responses (100-1000 tokens)
